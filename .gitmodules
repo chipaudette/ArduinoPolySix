@@ -1,0 +1,3 @@
+[submodule "ArduinoLibraries/AdafruitMCP4725"]
+	path = ArduinoLibraries/AdafruitMCP4725
+	url = https://github.com/adafruit/Adafruit_MCP4725.git
