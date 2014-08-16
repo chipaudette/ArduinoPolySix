@@ -25,6 +25,8 @@ void keybed_t::resetKeyPress(const int &noteIndex)
   }
 }
 
+//use this function to toggle between the 6 voices of poly mode, the 3 voices of 
+//poly-unison and poly-chordmem
 void keybed_t::set_nKeyPressSlots(const int &newVal) 
 {
   int val = min(N_KEY_PRESS_DATA,newVal);
@@ -51,6 +53,7 @@ void keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
   if (ind < 0) {
     //there are no available notes, so try to get the oldest one not pressed but maybe it is held
     ind = findOldestKeyPress_NotPressed();
+    
     if (ind < 0) {
       //there are no available notes, so just get oldest note
       ind = getOldestKeyPress();
@@ -71,7 +74,7 @@ void keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
 
 int keybed_t::findOldestKeyPress_NotPressedNotHeld(void) {
   int return_ind = -1;
-  millis_t oldest_millis = 0xFFFFFFFF;
+  millis_t oldest_millis = 0xFFFFFFFF;  //init to biggest number
  
   for (int i=0; i < nKeyPressSlots; i++) {
     if ((allKeybedData[i].isPressed==OFF) & (allKeybedData[i].isHeld==OFF)) {
@@ -87,7 +90,7 @@ int keybed_t::findOldestKeyPress_NotPressedNotHeld(void) {
 
 int keybed_t::findOldestKeyPress_NotPressed(void) {
   int return_ind = -1;
-  millis_t oldest_millis = 0xFFFFFFFF;
+  millis_t oldest_millis = 0xFFFFFFFF; //init to biggest number
 
   for (int i=0; i < nKeyPressSlots; i++) {
     if (allKeybedData[i].isPressed==OFF) {
@@ -103,7 +106,7 @@ int keybed_t::findOldestKeyPress_NotPressed(void) {
 
 int keybed_t::getOldestKeyPress(void) {
   int oldest_ind = -1;
-  millis_t oldest_millis = 0xFFFFFFFF;
+  millis_t oldest_millis = 0xFFFFFFFF;  //init to biggest number
   
   for (int i=0; i<nKeyPressSlots; i++) {
     if (allKeybedData[i].start_millis < oldest_millis) {
@@ -176,7 +179,7 @@ void keybed_t::stopKeyPress(const int &noteNum,const int &noteVel) {
       //is a stop all command?
     stopAllKeyPresses();
   } else {
-    //find any matching noteNum and stop it
+    //find any and all matching noteNum and stop them all
     for (ind = 0; ind < N_KEY_PRESS_DATA; ind++) {
       if (allKeybedData[ind].noteNum == noteNum) {
         stopKeyPressByInd(ind,noteVel);
@@ -249,8 +252,8 @@ int keybed_t::isAnyGateActive(void) {
   for (int Ikey = 0; Ikey < nKeyPressSlots; Ikey++) {
     if (isGateActive(Ikey)==ON) {
       return true;
-    };
-  };
+    }
+  }
   return false;
 }
   
@@ -331,7 +334,7 @@ int findNewest(const int &nKeyPressesToFind,const int &nDone, boolean acceptance
   int candidate_ind = 0;
   int nFound=0;
   //static boolean firstTime=true;
-  static boolean alreadyGotHim[N_KEY_PRESS_DATA];
+  //static boolean alreadyGotHim[N_KEY_PRESS_DATA];
   
   //initialize
   for (i=0; i < nDone; i++) {

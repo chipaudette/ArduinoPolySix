@@ -50,9 +50,9 @@ void check_mem() {
 #include <Adafruit_MCP4725.h>
 
 //define our global variables
-keybed_t trueKeybed;
-keybed_t arpGeneratedKeybed;
-voiceData_t allVoiceData[N_VOICE_SLOTS];
+keybed_t trueKeybed;  //this represents the keys pressed on the actual keybed
+keybed_t arpGeneratedKeybed; //this represents the keys that are "pressed" by the arpeggiator
+voiceData_t allVoiceData[N_VOICE_SLOTS]; //these are the 6 voices of the polysix
 assignerState_t assignerState;
 arpManager_t arpManager(&trueKeybed,&arpGeneratedKeybed);
 assignerButtonState2_t assignerButtonState;
@@ -142,7 +142,7 @@ void loop(void) {
   static boolean firstPrint = true;
   //count++;
   //if (count % 10000 == 1) Serial.println("in main loop...");
-  if (newTimedAction) {
+  if (newTimedAction) {        //newTimedAction is set to true at fixed intervals via Timer3Callback
     serviceNextVoicePeriod();
     newTimedAction = false;
 //    if ((millis() > 5000) & (firstPrint)) {

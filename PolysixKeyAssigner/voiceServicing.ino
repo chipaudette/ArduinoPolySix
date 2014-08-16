@@ -282,8 +282,6 @@ void updateVoiceAllocation(void)
   } else if (assignerState.chord_mem == ON) {
     allocateVoiceForChordMem(keybed);
   }
-  
-
 }
 
 //allocate the voices for poly mode
@@ -361,8 +359,8 @@ void allocateVoiceForUnisonPoly(keybed_t *keybed)
   
   //copy the three voices to the other three voices
   int secondVoice = 0;
-  for (int Ivoice=0; Ivoice < keybed->get_nKeyPressSlots(); Ivoice++) {
-    secondVoice = Ivoice+3;
+  for (int Ivoice=0; Ivoice < keybed->get_nKeyPressSlots(); Ivoice++) { //in this mode, only the bottom 3 slots are used
+    secondVoice = Ivoice+3;  //copy into the upper 3 slots
     if (secondVoice < N_POLY) {
       allVoiceData[secondVoice] = allVoiceData[Ivoice];
     }

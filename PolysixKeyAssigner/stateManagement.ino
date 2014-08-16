@@ -289,7 +289,7 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
   //if the state has changed, deactivate the previous state
   if (stateChanged==true){
     
-    //de-active the previous state
+    //de-activate the previous state
     if (prevState == STATE_UNISON) {
       Serial.println("updatePolyUnisonChordState: Disabling Unison");
       deactivateUnison();
@@ -811,7 +811,7 @@ void setChordMemState(void)
 //assumes that the noteShift has already been set for each voice
 void setDetuneFactorsForChordMemory(void) {
 
-  //look for special case of chip's favority 4-note Mono/Poly config
+  //look for special case of chip's favorite 4-note Mono/Poly config
   int isMonoPolyOctaves = checkAndApplyMonoPolyOctaveDetune();
 
   //if not Mono/Poly octaves, distribute the detune the regular way
@@ -892,6 +892,7 @@ void setDetuneFactorsForChordMemory(void) {
   }
 }
 
+//does the chord mem have 2 at root and 2 at +1 octave?
 int checkAndApplyMonoPolyOctaveDetune(void) {
   int isMonoPolyOctaves = true;
   int nRoot = 0, nOctave = 0;
@@ -912,17 +913,17 @@ int checkAndApplyMonoPolyOctaveDetune(void) {
           //chordMemState.detuneFactor[i] = 0; //don't detune the roots
           curRootCount++;
           if ((curRootCount % 2) == 0) {
-            chordMemState.detuneFactor[i] = 0; 
+            chordMemState.detuneFactor[i] = 0; //no detune
           } else {
-            chordMemState.detuneFactor[i] = 0; 
+            chordMemState.detuneFactor[i] = 0; //no detune
           }
         }
         if (chordMemState.noteShift[i] == 12) {
           curCountOctave++;
           if ((curCountOctave % 2) == 1) {
-            chordMemState.detuneFactor[i] = 1; 
+            chordMemState.detuneFactor[i] = 1;  //positive is down in pitch
           } else {
-            chordMemState.detuneFactor[i] = -1; 
+            chordMemState.detuneFactor[i] = -1; //negative is up in pitch
           }
         }
       }
