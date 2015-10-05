@@ -21,8 +21,10 @@
 #define PS_MC_PIN  44
 #define PS_ACKR_PIN  45
 #define PS_4FT_PIN  46
-#define PS_8FT_PIN  16
-#define PS_RESET_PIN 17
+//define PS_8FT_PIN  16
+//define PS_RESET_PIN 17
+#define PS_8FT_PIN  3    //moved Oct 2015 to free-up Serial2
+#define PS_RESET_PIN 4   //moved Oct 2015 to free-up Serial2
 
 #define SW_FROMTAPE_PIN 53
 
