@@ -1,6 +1,6 @@
 
 #include "dataTypes.h"
-#include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
+//include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
 
 #define DEBUG_THIS_FILE false
 

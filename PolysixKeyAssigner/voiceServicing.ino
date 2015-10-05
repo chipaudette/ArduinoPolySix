@@ -1,7 +1,7 @@
 
 
 #include "dataTypes.h"  //data type definitions and global macros
-#include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
+//include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
 
 #define DEBUG_THIS_FILE false
 #define BIAS_PITCH_NOTES (12)

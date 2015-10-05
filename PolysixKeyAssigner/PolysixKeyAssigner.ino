@@ -3,6 +3,7 @@
  Polysix Key Assigner
  Author: Chip Audette
  First Created: Feb-Apr 2013
+ Extended:  Oct 2015, Velocity Processing
  
  Goal: Replace the functions performed by the 8049-217 microprocessor
  used by the Korg Polysix synthesizer.  This microprocessor is the
@@ -22,7 +23,7 @@
 #include "dataTypes.h"
 
 //Mapping of all the digital pins is defined in KeyAssignerPinMap
-#include <KeyAssignerPinMap.ino>
+//include <KeyAssignerPinMap.ino>
 
 /* This function places the current value of the heap and stack pointers in the
  * variables. You can call it from any place in your code and save the data for
@@ -106,8 +107,9 @@ void switchStateManager::printUpdateVals(const int &state, const int &debounceCo
 
 void setup() {
   //setup the serial bus
+  Serial2.begin(115200); //for communication to Arduino/Teensy doing velocity processing
   Serial3.begin(31200);  //set to 31200 for MIDI
-  Serial.begin(115200);  //for debugging
+  Serial.begin(115200);  //for debugging via USB
 
   //setup the pins that are plugging into the empty 8049-217 socket
   setupDigitalPins();
