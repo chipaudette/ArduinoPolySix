@@ -4,7 +4,7 @@
 //include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
 
 #define DEBUG_THIS_FILE false
-#define BIAS_PITCH_NOTES (12)
+#define BIAS_PITCH_NOTES (12)   //shift note by this many half-steps
 
 //initialization routine
 void initializeVoiceData(voiceData_t voiceData[], const int &N)

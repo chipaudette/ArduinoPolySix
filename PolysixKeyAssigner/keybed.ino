@@ -160,8 +160,8 @@ int keybed_t::get2ndNewestKeyPress(void) {
 }
 
 void keybed_t::createKeyPress(const int &ind, const int &noteNum, const int &noteVel) {
-  static float fooFreq;
-  static unsigned long foo_dPhase;
+  //static float fooFreq;
+  //static unsigned long foo_dPhase;
   
   allKeybedData[ind].noteNum = noteNum;
   allKeybedData[ind].noteVel = noteVel;
@@ -390,7 +390,7 @@ void keybed_t::reduceAndConsolodate(const int &newVal)
     newKeybedData[I_key] = allKeybedData[I_key];
   }
   
-  //find newest keybed 
+  //find newest keys pressed
   static int newestKeyInd[N_KEY_PRESS_DATA];
   static int nToFind=min(N_KEY_PRESS_DATA,newVal);
   findNewestKeyPresses(nToFind,newestKeyInd);
@@ -400,7 +400,7 @@ void keybed_t::reduceAndConsolodate(const int &newVal)
   
   //copy newest notes into lowest slots of the main keybed structure
   for (int I_key = 0; I_key < nToFind; I_key++) {
-    allKeybedData[I_key] =newKeybedData[newestKeyInd[I_key]];
+    allKeybedData[I_key] = newKeybedData[newestKeyInd[I_key]];
   }
 }
 
