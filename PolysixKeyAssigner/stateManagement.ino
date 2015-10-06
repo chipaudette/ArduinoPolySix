@@ -650,6 +650,8 @@ void deactivateUnison(void)
   if (assignerState.arp == OFF) {
     for (int i=0;i<N_POLY;i++) {
       (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+      (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
+      (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
     }
   }
 }
@@ -677,6 +679,8 @@ void deactivateUnisonPoly(void)
   if (assignerState.arp == OFF) {
     for (int i=0;i<N_POLY;i++) {
       (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+      (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
+      (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
     }
   }
   
@@ -714,6 +718,8 @@ void deactivateChordMemory(void)
       if (chordMemState.isNoteActive[i]==HIGH) {
         //allKeybedData[i].noteNum = allVoiceData[i].noteNum;
         (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+        (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
+        (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
       }
     }
   }

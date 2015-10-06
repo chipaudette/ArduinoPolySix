@@ -19,6 +19,7 @@ void initializeVoiceData(voiceData_t voiceData[], const int &N)
     voiceData[i].start_millis=0; //when the note on the voice is started
     voiceData[i].end_millis=0;   //when the note on the voice is ended
     voiceData[i].forceRetrigger=false;
+    voiceData[i].isNewVelocity = false;
   }
 }
 
@@ -50,6 +51,7 @@ void serviceNextVoicePeriod(void)
 }
 
 //specific function for servicing a pitched voice (V1-V6, Vx7, Vx8)
+//note that voiceInd is 1-8, not 0-7
 void serviceVoice(const int &voiceInd)
 {
   //clear the MC signal
@@ -67,8 +69,14 @@ void serviceVoice(const int &voiceInd)
   //make the adjustment to the pitch value
   int32_t pitchAdjust_notes_x16bits = getPitchAdjust(voiceInd);
   setDAC_pitchNotes(pitchAdjust_notes_x16bits);
-  
-  delayMicroseconds(20); //was 5
+
+  //update the velocity value for this voice, if necessary
+  if (allVoiceData[voiceInd-1].isNewVelocity) {
+    allVoiceData[voiceInd-1].isNewVelocity = 0;
+    sendVelocityData(voiceInd);
+  } else {
+    delayMicroseconds(20); //was 5.  Let the pitch DAC settle
+  }
   
   //update the LFO
   updateLFO(voiceInd);
@@ -190,6 +198,16 @@ byte getPitchByte(const int &voiceInd)
   
   return ((byte)outNoteNum);
 }
+
+//Note "voiceInd" is 1-8, not 0-7
+void sendVelocityData(const int &voiceInd) {
+  //send message to velocity processor in format 0bVVVVVIII
+  //    where VVVVV is a 5-bit representation of the voice's velocity
+  //    where III is a 3-bit represention of the voice number (counting from zero)
+  byte velByte = (allVoiceData[voiceInd-1].noteVel) >> (7-2);  //noteVel is MIDI vel (7 bit).  We need 5 bit.  So, shift by 2.
+  byte outVal = (velByte << 3) | ((byte)(voiceInd-1));  //composite the two pieces, velocity upper and voice index lower
+  Serial2.write(outVal);
+}
       
 //specific function for servicing the inter-voice (IV) period
 void serviceInterVoice(const int &voiceInd)
@@ -295,7 +313,7 @@ void allocateVoiceForPoly(keybed_t *keybed)
   
   //there are only six voices and six keypress slots, so just pass them through
   for (int Ivoice=0;Ivoice < nVoices;Ivoice++) { 
-    if (allVoiceData[Ivoice].noteNum == allKeybedData[Ivoice].noteNum) {
+    if ((allVoiceData[Ivoice].noteNum == allKeybedData[Ivoice].noteNum) && (allKeybedData[Ivoice].isNewVelocity == false)){
       isNoteChanging = false;
     } else { 
       isNoteChanging = true;
@@ -337,7 +355,7 @@ void allocateVoiceForUnison(keybed_t *keybed)
   keybed->findNewestKeyPresses(nToFind,newestKeyInd);
   
   //is this a change in voice?
-  if (allVoiceData[0].noteNum == keybedData[newestKeyInd[0]].noteNum) {
+  if ((allVoiceData[0].noteNum == keybedData[newestKeyInd[0]].noteNum) && (keybedData[0].isNewVelocity == false)) {
     noteIsChanging = false;
   } else {
     noteIsChanging = true;
@@ -381,7 +399,8 @@ void allocateVoiceForChordMem(keybed_t *keybed)
   
   //is this a change in voice?
   if ((allVoiceData[chordMemState.voiceIndexOfBase].noteNum != keybedData[newestKeyInd[0]].noteNum) |
-      (keybedData[newestKeyInd[0]].forceRetrigger == true)) {
+      (keybedData[newestKeyInd[0]].forceRetrigger == true) || 
+      (keybedData[newestKeyInd[0]].isNewVelocity == true)) {
     noteIsChangingOrRestarting = true;
   } else {
     noteIsChangingOrRestarting = false;
@@ -433,6 +452,7 @@ void assignKeyPressToVoice(keyPressData_t *keybedData,int const &I_key,int const
     allVoiceData[I_voice].start_millis =  keybedData[I_key].start_millis;
     allVoiceData[I_voice].end_millis = keybedData[I_key].end_millis;
     allVoiceData[I_voice].forceRetrigger = keybedData[I_key].forceRetrigger;
+    allVoiceData[I_voice].isNewVelocity = keybedData[I_key].isNewVelocity;
     
     keybedData[I_key].forceRetrigger = false; //clear this flag once it has been copied over to the voice data
   //}

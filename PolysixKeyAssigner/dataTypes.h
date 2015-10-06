@@ -83,6 +83,7 @@ class keyPressData_t {
     millis_t end_millis;    //when the key is released
     //int allocatedToVoice;   //index into voice structure holding this note
     int forceRetrigger;
+    int isNewVelocity;
     int isGateActive(void) {
       if ((isPressed==ON) | (isHeld==ON)) {
         return ON;
@@ -99,7 +100,7 @@ class keyPressData_t {
     };
     void reset(void) {
       noteNum = 0;  noteVel = 0;  isPressed = OFF;  isHeld = OFF; isLatched = OFF;
-      start_millis = 0;  end_millis = 0;  forceRetrigger = true;
+      start_millis = 0;  end_millis = 0;  forceRetrigger = true; isNewVelocity = OFF;
     };
 //    void copyFrom(const keyPressData_t &input) {
 //      noteNum = input.noteNum;      noteVel = input.noteVel;      isPressed = input.isPressed;      isHeld = input.isHeld;
@@ -121,6 +122,7 @@ typedef struct {
   millis_t start_millis; //when the note on the voice is started
   millis_t end_millis;   //when the note on the voice is ended
   int forceRetrigger;
+  int isNewVelocity;
 } voiceData_t;
 
 typedef struct {

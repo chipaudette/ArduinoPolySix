@@ -165,6 +165,7 @@ void keybed_t::createKeyPress(const int &ind, const int &noteNum, const int &not
   
   allKeybedData[ind].noteNum = noteNum;
   allKeybedData[ind].noteVel = noteVel;
+  allKeybedData[ind].isNewVelocity = true;
   allKeybedData[ind].isPressed = ON;
   allKeybedData[ind].isHeld = OFF;
   if (isHoldNewNote()) allKeybedData[ind].isHeld = ON;
@@ -193,6 +194,7 @@ void keybed_t::stopKeyPressByInd(const int &ind, const int &noteVel)
   if (allKeybedData[ind].isPressed == ON) {
     allKeybedData[ind].isPressed = OFF;
     allKeybedData[ind].noteVel = noteVel;
+    allKeybedData[ind].isNewVelocity = true;
     allKeybedData[ind].end_millis = millis();
   }
 }
@@ -203,6 +205,7 @@ void keybed_t::stopAllKeyPresses(void) {
     if (allKeybedData[ind].isPressed == ON) {
       allKeybedData[ind].isPressed = OFF;
       allKeybedData[ind].end_millis = end_time;
+      allKeybedData[ind].isNewVelocity = false;
     }
   }
 }
