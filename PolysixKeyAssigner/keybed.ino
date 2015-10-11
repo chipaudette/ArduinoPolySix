@@ -193,8 +193,8 @@ void keybed_t::stopKeyPressByInd(const int &ind, const int &noteVel)
 {
   if (allKeybedData[ind].isPressed == ON) {
     allKeybedData[ind].isPressed = OFF;
-    allKeybedData[ind].noteVel = noteVel;
-    allKeybedData[ind].isNewVelocity = true;
+    //allKeybedData[ind].noteVel = noteVel;  //don't send note-off velocity for now.  2015-10-11
+    //allKeybedData[ind].isNewVelocity = true;
     allKeybedData[ind].end_millis = millis();
   }
 }

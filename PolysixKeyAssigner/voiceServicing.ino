@@ -72,7 +72,8 @@ void serviceVoice(const int &voiceInd)
 
   //update the velocity value for this voice, if necessary
   if (allVoiceData[voiceInd-1].isNewVelocity) {
-    allVoiceData[voiceInd-1].isNewVelocity = 0;
+    //disableIsNewVelocity(voiceInd);
+    allVoiceData[voiceInd-1].isNewVelocity = 0;  
     sendVelocityData(voiceInd);
   } else {
     delayMicroseconds(20); //was 5.  Let the pitch DAC settle
@@ -200,13 +201,41 @@ byte getPitchByte(const int &voiceInd)
 }
 
 //Note "voiceInd" is 1-8, not 0-7
+//disableIsNewVelocity(const int &voiceInd) {
+//  //disable the isNew for this voice
+//  allVoiceData[voiceInd-1].isNewVelocity = 0;  
+//}
+
+//Note "voiceInd" is 1-8, not 0-7
 void sendVelocityData(const int &voiceInd) {
   //send message to velocity processor in format 0bVVVVVIII
   //    where VVVVV is a 5-bit representation of the voice's velocity
   //    where III is a 3-bit represention of the voice number (counting from zero)
-  byte velByte = (allVoiceData[voiceInd-1].noteVel) >> (7-2);  //noteVel is MIDI vel (7 bit).  We need 5 bit.  So, shift by 2.
-  byte outVal = (velByte << 3) | ((byte)(voiceInd-1));  //composite the two pieces, velocity upper and voice index lower
+  int vel = allVoiceData[voiceInd-1].noteVel;
+  #define MIN_MIN_VEL_RECEIVED 10
+  if (vel < MIN_MIN_VEL_RECEIVED) {
+    vel = 0;
+  } else {
+    #define MIN_VEL_RECEIVED 40
+    #define MAX_VEL_RECEIVED 120
+    vel = constrain(vel,MIN_VEL_RECEIVED,MAX_VEL_RECEIVED);
+    
+    #define MIN_VEL_TRANSMITTED 1
+    #define MAX_VEL_TRANSMITTED 31  //need 5-bit, so up to 31
+    vel = map(vel,MIN_VEL_RECEIVED,MAX_VEL_RECEIVED,MIN_VEL_TRANSMITTED,MAX_VEL_TRANSMITTED);
+  }
+  //byte velByte = (vel >> 2);  //noteVel is MIDI vel (7 bit).  We need 5 bit.  So, shift by 2.
+  byte outVal = (((byte)vel) << 3) | ((byte)(voiceInd-1));  //composite the two pieces, velocity upper and voice index lower
   Serial2.write(outVal);
+//  Serial.print("SendVel: voice ");
+//  Serial.print(voiceInd);
+//  Serial.print(", given vel ");
+//  Serial.print(allVoiceData[voiceInd-1].noteVel);
+//  Serial.print(", remaped ");
+//  Serial.print(vel);
+//  Serial.print(", sent byte ");
+//  Serial.println(outVal,BIN);
+  
 }
       
 //specific function for servicing the inter-voice (IV) period
@@ -341,6 +370,11 @@ void allocateVoiceForPoly(keybed_t *keybed)
       }
     }  
   }
+
+  //clear any "isNew" fields
+  for (int Ivoice=0;Ivoice < nVoices;Ivoice++) { 
+    allKeybedData[Ivoice].isNewVelocity = 0;
+  }
 }
 
 //allocate voices for unison
@@ -367,6 +401,10 @@ void allocateVoiceForUnison(keybed_t *keybed)
     assignKeyPressToVoice(keybedData,newestKeyInd[0],Ivoice); 
     if (noteIsChanging) { allVoiceData[Ivoice].forceRetrigger = true; } //force retrigger if new note 
   }
+
+  //clear any "isNew" fields
+  keybedData[0].isNewVelocity = 0;
+  
 }
 
 //allocate voices for unison-poly...where 3 notes can be played, all detuned
@@ -418,6 +456,9 @@ void allocateVoiceForChordMem(keybed_t *keybed)
       if (noteIsChangingOrRestarting) { allVoiceData[Ivoice].forceRetrigger = true; } //force retrigger if new note
     }
   }
+
+  //clear any "isNew" fields
+  keybedData[newestKeyInd[0]].isNewVelocity = 0;
 }
 
 //print out the current voice state
