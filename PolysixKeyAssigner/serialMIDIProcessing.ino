@@ -151,19 +151,22 @@ void interpretCCMessage(const byte &controllerNumber, const byte &value_byte)
     
 //interpret the Mod Wheel messages
 void updateModWheel(const byte &value_byte) {
-  //right now, let's alter the basic voice timing...as an experiment
-  long newDuration_usec = 100; //minimum allowed voice duration...normal is 676usec
+  // re-use the aftertouch functionality
+  aftertouch_val = (int)value_byte;
   
-  //assume each increment in value_byte is worth 10 usec.  If value_byte spans 120, this will
-  //yield a total range of zero to 1200 usec
-  newDuration_usec += ((long)value_byte)*10L;
-  
-  if (value_byte > 120) {
-    newDuration_usec = 250000;
-  }
-  
-  //send he command to adjust the timing
-  adjustVoiceTimerDuration(newDuration_usec);
+//  //right now, let's alter the basic voice timing...as an experiment
+//  long newDuration_usec = 100; //minimum allowed voice duration...normal is 676usec
+//  
+//  //assume each increment in value_byte is worth 10 usec.  If value_byte spans 120, this will
+//  //yield a total range of zero to 1200 usec
+//  newDuration_usec += ((long)value_byte)*10L;
+//  
+//  if (value_byte > 120) {
+//    newDuration_usec = 250000;
+//  }
+//  
+//  //send he command to adjust the timing
+//  adjustVoiceTimerDuration(newDuration_usec);
 }
 
 void updateSustainPedal(const byte &value_byte) {
