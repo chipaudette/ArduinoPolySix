@@ -45,6 +45,7 @@
 byte values[N_CHAN];  //span 0-255
 volatile int cur_chan = 0;
 int chan_from_given_addr = 0;
+int chan_from_serial_comms = N_CHAN;  //default to something big
 
 void setup() {
   //start serial for debugging
@@ -154,8 +155,33 @@ void setAllChannels(byte new_val) {
 
 
 void interpretSerialByte(byte serialByte) {
-  int chan = (serialByte & 0b00000111);  //low bits are channel
-  values[chan]  = (byte)(serialByte & 0b11111000);  //high bits are the value
+
+  //original method...single byte
+  //int chan = (serialByte & 0b00000111);  //low bits are channel
+  //values[chan]  = (byte)(serialByte & 0b11111000);  //high bits are the value
+  //Serial.print("Received: Chan ");
+  //Serial.print(chan);
+  //Serial.print(", Value ");
+  //Serial.println(values[chan]);
+
+  //high res method...two bytes
+  //...first byte starts with 1 and has channel #
+  //...second byte starts with 0 and has value (0-127)
+  if (serialByte & 0b10000000) {
+    //first bit is one...this is a channel byte
+    chan_from_serial_comms = (serialByte & 0b00000111);
+  } else {
+    //first bit is zero...this is a data byte
+    if (chan_from_serial_comms < N_CHAN) {
+      values[chan_from_serial_comms] = serialByte << 1; //0-127 to 0-255
+//      Serial.print("Received: Chan ");
+//      Serial.print(chan_from_serial_comms);
+//      Serial.print(", Value ");
+//      Serial.println(values[chan_from_serial_comms]);
+    }
+  }
+
+  
   //Serial.print("Received: Chan ");
   //Serial.print(chan);
   //Serial.print(", Value ");
