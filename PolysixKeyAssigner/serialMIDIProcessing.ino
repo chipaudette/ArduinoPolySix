@@ -70,12 +70,12 @@ void serviceSerial(void) {
           
         case 0x90:
           //note on message
-          //if (DEBUG_TO_SERIAL) { 
+          if (DEBUG_TO_SERIAL) { 
             Serial.print("Note On Received: noteNum = ");
             Serial.print(noteNum); 
             Serial.print(", Vel = ");
             Serial.println(noteVel);
-          //}
+          }
           //turnOnStatLight(STAT2);//turn on STAT2 light indicating that a note is active
           trueKeybed.addKeyPress(noteNum,noteVel);
           break;
