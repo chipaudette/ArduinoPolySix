@@ -129,7 +129,7 @@ void setup() {
   Timer3.attachInterrupt(timer3_callback);  // attaches callback() as a timer overflow interrupt
   
   //setup interupt pin for arpeggiator Arpegiator and LFO
-  #define PS_ACKI_INT 4  //this is interrupt #2 http://arduino.cc/en/Reference/AttachInterrupt 
+  #define PS_ACKI_INT 4  //which interrupt?  On Mega 2560, #4 is on pin 19. http://arduino.cc/en/Reference/AttachInterrupt 
   attachInterrupt(PS_ACKI_INT, measureInterruptTiming, RISING); //measure the ARP timing
   //pinMode(LFO_OUT_PIN,OUTPUT);
   //Timer4.initialize(LFO_PWM_MICROS/2);

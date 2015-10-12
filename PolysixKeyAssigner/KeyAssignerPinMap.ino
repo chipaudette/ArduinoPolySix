@@ -25,9 +25,13 @@
 //define PS_RESET_PIN 17
 #define PS_8FT_PIN  3    //moved Oct 2015 to free-up Serial2
 #define PS_RESET_PIN 4   //moved Oct 2015 to free-up Serial2
-
 #define SW_FROMTAPE_PIN 53
+#define PORTAMENTO_PEDAL_PIN 2
+#define SUSTAIN_PEDAL_PIN 18
+//NOTE: ARP Interrupt is on Pin 19 (Interrupt #4)
 
+
+//Define some constants
 #define BUT_ARP_FULL_BIT 7
 #define BUT_ARP_2OCT_BIT 6
 #define BUT_ARP_1OCT_BIT 5
@@ -47,8 +51,6 @@
 #define LED_CHORD_BIT 1
 #define LED_HOLD_BIT 0
 
-#define PORTAMENTO_PEDAL_PIN 2
-#define SUSTAIN_PEDAL_PIN 18
 
 #ifndef _SETUP_PS_HARDWARE_SERVICES
 #define _SETUP_PS_HARDWARE_SERVICES
