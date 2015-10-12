@@ -162,21 +162,21 @@ void loop(void) {
   
 }
 
-//adjust the duration of the voice timer
-void adjustVoiceTimerDuration(const long &newDuration_usec)
-{
-  static boolean firstTime=true;
-
-  #if 0
-    Timer3.setPeriod(newDuration_usec);
-    voiceDuration_usec = newDuration_usec;
-  #else
-    if (firstTime) {
-      if (DEBUG_TO_SERIAL) Serial.println("adjustVoiceTimerDuration: this is disabled.");
-      firstTime=false;
-    }
-  #endif
-}
+////adjust the duration of the voice timer
+//void adjustVoiceTimerDuration(const long &newDuration_usec)
+//{
+//  static boolean firstTime=true;
+//
+//  #if 0
+//    Timer3.setPeriod(newDuration_usec);
+//    voiceDuration_usec = newDuration_usec;
+//  #else
+//    if (firstTime) {
+//      if (DEBUG_TO_SERIAL) Serial.println("adjustVoiceTimerDuration: this is disabled.");
+//      firstTime=false;
+//    }
+//  #endif
+//}
 
 //here is the callback for pin attached to the Polysix's arp clock
 void measureInterruptTiming(void)

@@ -262,7 +262,7 @@ void sendVelocityData_2byte(const int &voiceInd) {
   }
 
  //second byte: leading 0, then velocity value (7-bit...which is the MIDI standard)
-  byte byteOut2 = 0b01111111 & ((byte)vel);  //force first bit to zer, just in case
+  byte byteOut2 = 0b01111111 & ((byte)vel);  //force first bit to zero, just in case
   Serial2.write(byteOut2);
   
 //  Serial.print("SendVel: voice ");

@@ -46,8 +46,6 @@
 #define OCTAVE_8FT (1)
 #define OCTAVE_4FT (2)
 
-#define PS_ACKI_PIN  (19)      //this is attached to an interrupt pin http://arduino.cc/en/Reference/AttachInterrupt 
-#define LFO_OUT_PIN (7) //pins 6, 7, 8 are controlled by Timer4 on the Mega 2560
 #define LFO_PWM_MICROS (200)
 #define LFO_BITS 10
 #define LFO_MAX 1024
