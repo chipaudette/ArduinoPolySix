@@ -74,7 +74,8 @@ void serviceVoice(const int &voiceInd)
   if (allVoiceData[voiceInd-1].isNewVelocity) {
     //disableIsNewVelocity(voiceInd);
     allVoiceData[voiceInd-1].isNewVelocity = 0;  
-    sendVelocityData(voiceInd);
+    //sendVelocityData_1byte(voiceInd);
+    sendVelocityData_2byte(voiceInd);
   } else {
     delayMicroseconds(20); //was 5.  Let the pitch DAC settle
   }
@@ -200,14 +201,9 @@ byte getPitchByte(const int &voiceInd)
   return ((byte)outNoteNum);
 }
 
-//Note "voiceInd" is 1-8, not 0-7
-//disableIsNewVelocity(const int &voiceInd) {
-//  //disable the isNew for this voice
-//  allVoiceData[voiceInd-1].isNewVelocity = 0;  
-//}
 
-//Note "voiceInd" is 1-8, not 0-7
-void sendVelocityData(const int &voiceInd) {
+//Note: "voiceInd" is 1-8, not 0-7
+void sendVelocityData_1byte(const int &voiceInd) {
   //send message to velocity processor in format 0bVVVVVIII
   //    where VVVVV is a 5-bit representation of the voice's velocity
   //    where III is a 3-bit represention of the voice number (counting from zero)
@@ -235,6 +231,50 @@ void sendVelocityData(const int &voiceInd) {
 //  Serial.print(vel);
 //  Serial.print(", sent byte ");
 //  Serial.println(outVal,BIN);
+}
+
+//Note: "voiceInd" is 1-8, not 0-7
+void sendVelocityData_2byte(const int &voiceInd) {
+  //send message to velocity processor in format: byte1 = 0b1xxxxIII, byte2 = 0b0VVVVVVV
+  //    where III is a 3-bit represention of the voice number (counting from zero)
+  //    where VVVVVVV is a 7-bit representation of the voice's velocity
+  
+  //first byte: leading 1, then channel number
+  byte byteOut1 = 0b10000000 | ((byte)(voiceInd-1)); //force first bit to 1
+  Serial2.write(byteOut1);
+
+  //prepare velocity value
+  int vel = allVoiceData[voiceInd-1].noteVel;
+  #define LOW_IN 0
+  #define LOWMID_IN 40
+  #define HIGHMID_IN 110
+  #define HIGH_IN 120
+  #define LOW_OUT 0
+  #define LOWMID_OUT 20
+  #define HIGHMID_OUT 90
+  #define HIGH_OUT 127
+  if (vel < LOWMID_IN) {
+    vel = map(vel,LOW_IN,LOWMID_IN,LOW_OUT,LOWMID_OUT);
+  } else if (vel < HIGHMID_IN) {
+    vel = map(vel,LOWMID_IN,HIGHMID_IN,LOWMID_OUT,HIGHMID_OUT);
+  } else {
+    vel = map(constrain(vel,HIGHMID_IN,HIGH_IN), HIGHMID_IN, HIGH_IN, HIGHMID_OUT, HIGH_OUT);
+  }
+
+ //second byte: leading 0, then velocity value (7-bit...which is the MIDI standard)
+  byte byteOut2 = 0b01111111 & ((byte)vel);  //force first bit to zer, just in case
+  Serial2.write(byteOut2);
+  
+//  Serial.print("SendVel: voice ");
+//  Serial.print(voiceInd);
+//  Serial.print(", given vel ");
+//  Serial.print(allVoiceData[voiceInd-1].noteVel);
+//  Serial.print(", remaped ");
+//  Serial.print(vel);
+//  Serial.print(", sent bytes ");
+//  Serial.print(byteOut1,BIN);
+//  Serial.print(" ");
+//  Serial.println(byteOut2,BIN);
   
 }
       
