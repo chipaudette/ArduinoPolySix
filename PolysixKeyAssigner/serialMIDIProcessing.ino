@@ -2,8 +2,8 @@
 //data type definitions and global macros
 #include "dataTypes.h"
 
-#define STAT1  10
-#define STAT2  6
+//#define STAT1  10
+//#define STAT2  6
 
 //void turnOnStatLight(int pin) {
 //  digitalWrite(pin,LOW);
@@ -48,18 +48,30 @@ void serviceSerial(void) {
           while (byte3 == 0xF8) { while (Serial3.available() == 0); byte3 = Serial3.read(); }
           noteVel = (int)byte3;
           if (ECHOMIDI) Serial.write(byte3);
+
+          #define MIN_VEL 1
+          if ((byte1 == 0x90) & (noteVel < MIN_VEL)) noteVel = MIN_VEL;
         }
       } 
+//      if ( ECHOMIDI_TXT && (byte1 == 0x90)) {
+//        Serial.print("0x");
+//        Serial.print(byte1,HEX);
+//        Serial.print(" ");
+//        Serial.print(noteNum);
+//        Serial.print(" ");
+//        Serial.println(noteVel);
+//      }
+      
       
       //shift notes to get the lowest note from the keybed to be note zero
       if((byte1==0x90) | (byte1==0x80)) noteNum += SHIFT_MIDI_NOTES;
       
       //check to see if it is a NOTE ON but with zero velocity
-      if ((byte1==0x90) & (noteVel==0)) {
-        if (DEBUG_TO_SERIAL) { Serial.print("Note On, but Zero Vel, so Note Off: noteNum = ");Serial.println(noteNum); }
-        byte1=0x80; //make it a note off message
-        noteVel = DEFAULT_ON_VEL;
-      }
+//      if ((byte1==0x90) & (noteVel==0)) {
+//        if (DEBUG_TO_SERIAL) { Serial.print("Note On, but Zero Vel, so Note Off: noteNum = ");Serial.println(noteNum); }
+//        byte1=0x80; //make it a note off message
+//        noteVel = DEFAULT_ON_VEL;
+//      }
         
       //check message type
       switch (byte1) {
