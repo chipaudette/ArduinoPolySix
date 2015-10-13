@@ -246,12 +246,12 @@ void sendVelocityData_2byte(const int &voiceInd) {
   //prepare velocity value
   int vel = allVoiceData[voiceInd-1].noteVel;
   #define LOW_IN 0
-  #define LOWMID_IN 40
-  #define HIGHMID_IN 110
+  #define LOWMID_IN 50
+  #define HIGHMID_IN 112
   #define HIGH_IN 120
   #define LOW_OUT 0
   #define LOWMID_OUT 20
-  #define HIGHMID_OUT 90
+  #define HIGHMID_OUT 65
   #define HIGH_OUT 127
   if (vel < LOWMID_IN) {
     vel = map(vel,LOW_IN,LOWMID_IN,LOW_OUT,LOWMID_OUT);
@@ -264,6 +264,12 @@ void sendVelocityData_2byte(const int &voiceInd) {
  //second byte: leading 0, then velocity value (7-bit...which is the MIDI standard)
   byte byteOut2 = 0b01111111 & ((byte)vel);  //force first bit to zero, just in case
   Serial2.write(byteOut2);
+
+//  Serial.print(voiceInd);
+//  Serial.print(" ");
+//  Serial.print(allVoiceData[voiceInd-1].noteVel,HEX);
+//  Serial.print(" ");
+//  Serial.println(vel,HEX);
   
 //  Serial.print("SendVel: voice ");
 //  Serial.print(voiceInd);
@@ -443,7 +449,7 @@ void allocateVoiceForUnison(keybed_t *keybed)
   }
 
   //clear any "isNew" fields
-  keybedData[0].isNewVelocity = 0;
+  keybedData[newestKeyInd[0]].isNewVelocity = 0;
   
 }
 
@@ -461,6 +467,9 @@ void allocateVoiceForUnisonPoly(keybed_t *keybed)
       allVoiceData[secondVoice] = allVoiceData[Ivoice];
     }
   }
+
+  //clear any "isNew" fields
+  //done as part of allocateVoiceForPoly
   
 }
 
@@ -492,6 +501,7 @@ void allocateVoiceForChordMem(keybed_t *keybed)
     allVoiceData[Ivoice].noteNum = constrain(newNote,0,119);  
     if (chordMemState.isNoteActive[Ivoice]==LOW) {
       allVoiceData[Ivoice].noteGate=LOW;
+      allVoiceData[Ivoice].isNewVelocity = 0;
     } else {
       if (noteIsChangingOrRestarting) { allVoiceData[Ivoice].forceRetrigger = true; } //force retrigger if new note
     }
