@@ -107,7 +107,7 @@ void switchStateManager::printUpdateVals(const int &state, const int &debounceCo
 
 void setup() {
   //setup the serial bus
-  Serial2.begin(115200); //for communication to Arduino/Teensy doing velocity processing
+  Serial2.begin(2*115200); //for communication to Arduino/Teensy doing velocity processing
   Serial3.begin(31200);  //set to 31200 for MIDI
   Serial.begin(115200);  //for debugging via USB
 

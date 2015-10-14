@@ -50,7 +50,7 @@ int chan_from_serial_comms = N_CHAN;  //default to something big
 void setup() {
   //start serial for debugging
   //Serial.begin(115200);
-  HWSERIAL.begin(115200);
+  HWSERIAL.begin(2*115200);
 
   // initialize SPI:
   pinMode (SPI_CS, OUTPUT);
