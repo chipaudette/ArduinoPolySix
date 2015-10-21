@@ -13,8 +13,8 @@
 
 #define EMPTY_VOICE -999
 
-#define N_KEY_PRESS_DATA 5   //should be 6...changed temporarily 2015-10-11
-#define N_POLY 5    //should be 6...changed temporarily 2015-10-11
+#define N_KEY_PRESS_DATA 6   //should be 6
+#define N_POLY 6    //should be 6
 #define N_VOICE_SLOTS 8
 #define INDEX_LAST_VOICE (8)    //index of the last voice period
 #define INDEX_LAST_PERIOD (9)  //index of whatever is the last period
