@@ -140,6 +140,7 @@ typedef struct {
   int portamento;
   int detune;
   int keypanel_mode;
+  int velocity_sensitivity;
   arp_parameters_t arp_params;
 } assignerState_t;
 

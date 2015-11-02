@@ -72,10 +72,14 @@ void serviceVoice(const int &voiceInd)
 
   //update the velocity value for this voice, if necessary
   if (allVoiceData[voiceInd-1].isNewVelocity) {
-    //disableIsNewVelocity(voiceInd);
-    allVoiceData[voiceInd-1].isNewVelocity = 0;  
-    //sendVelocityData_1byte(voiceInd);
-    sendVelocityData_2byte(voiceInd);
+    allVoiceData[voiceInd-1].isNewVelocity = 0;   //clear the flag
+
+    //check to see if we *should* update the velocity.  We always should, unless we're in
+    //legato mode.  The only time we should update in legato is if the note is off.
+    //if ( (assignerState.legato == false) || (allVoiceData[voiceInd-1].noteGate == 0) ) {
+        // yes, update the velocity
+        sendVelocityData_2byte(voiceInd);
+    //}
   } else {
     delayMicroseconds(20); //was 5.  Let the pitch DAC settle
   }
@@ -253,12 +257,17 @@ void sendVelocityData_2byte(const int &voiceInd) {
   #define LOWMID_OUT 20
   #define HIGHMID_OUT 65
   #define HIGH_OUT 127
-  if (vel < LOWMID_IN) {
-    vel = map(vel,LOW_IN,LOWMID_IN,LOW_OUT,LOWMID_OUT);
-  } else if (vel < HIGHMID_IN) {
-    vel = map(vel,LOWMID_IN,HIGHMID_IN,LOWMID_OUT,HIGHMID_OUT);
+  if (assignerState.velocity_sensitivity) {
+    if (vel < LOWMID_IN) {
+      vel = map(vel,LOW_IN,LOWMID_IN,LOW_OUT,LOWMID_OUT);
+    } else if (vel < HIGHMID_IN) {
+      vel = map(vel,LOWMID_IN,HIGHMID_IN,LOWMID_OUT,HIGHMID_OUT);
+    } else {
+      vel = map(constrain(vel,HIGHMID_IN,HIGH_IN), HIGHMID_IN, HIGH_IN, HIGHMID_OUT, HIGH_OUT);
+    }
   } else {
-    vel = map(constrain(vel,HIGHMID_IN,HIGH_IN), HIGHMID_IN, HIGH_IN, HIGHMID_OUT, HIGH_OUT);
+    //velocity sensitivity is disabled, so send as max velocity
+    vel = HIGH_OUT;
   }
 
  //second byte: leading 0, then velocity value (7-bit...which is the MIDI standard)

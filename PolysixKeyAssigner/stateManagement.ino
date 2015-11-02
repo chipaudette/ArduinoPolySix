@@ -20,6 +20,7 @@ void initAssignerState(void)
   assignerState.portamento = OFF;
   assignerState.detune = OFF;
   assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
+  assignerState.velocity_sensitivity = ON;
 };
 
 void initChordMemState(void)
