@@ -2,8 +2,8 @@
 //data type definitions and global macros
 #include "dataTypes.h"
 
-#define STAT1  10
-#define STAT2  6
+//#define STAT1  10
+//#define STAT2  6
 
 //void turnOnStatLight(int pin) {
 //  digitalWrite(pin,LOW);
@@ -48,18 +48,30 @@ void serviceSerial(void) {
           while (byte3 == 0xF8) { while (Serial3.available() == 0); byte3 = Serial3.read(); }
           noteVel = (int)byte3;
           if (ECHOMIDI) Serial.write(byte3);
+
+          #define MIN_VEL 1
+          if ((byte1 == 0x90) & (noteVel < MIN_VEL)) noteVel = MIN_VEL;
         }
       } 
+//      if ( ECHOMIDI_TXT && (byte1 == 0x90)) {
+//        Serial.print("0x");
+//        Serial.print(byte1,HEX);
+//        Serial.print(" ");
+//        Serial.print(noteNum);
+//        Serial.print(" ");
+//        Serial.println(noteVel);
+//      }
+      
       
       //shift notes to get the lowest note from the keybed to be note zero
       if((byte1==0x90) | (byte1==0x80)) noteNum += SHIFT_MIDI_NOTES;
       
       //check to see if it is a NOTE ON but with zero velocity
-      if ((byte1==0x90) & (noteVel==0)) {
-        if (DEBUG_TO_SERIAL) { Serial.print("Note On, but Zero Vel, so Note Off: noteNum = ");Serial.println(noteNum); }
-        byte1=0x80; //make it a note off message
-        noteVel = DEFAULT_ON_VEL;
-      }
+//      if ((byte1==0x90) & (noteVel==0)) {
+//        if (DEBUG_TO_SERIAL) { Serial.print("Note On, but Zero Vel, so Note Off: noteNum = ");Serial.println(noteNum); }
+//        byte1=0x80; //make it a note off message
+//        noteVel = DEFAULT_ON_VEL;
+//      }
         
       //check message type
       switch (byte1) {
@@ -70,7 +82,12 @@ void serviceSerial(void) {
           
         case 0x90:
           //note on message
-          if (DEBUG_TO_SERIAL) { Serial.print("Note On Message Received: noteNum = ");Serial.println(noteNum); }
+          if (DEBUG_TO_SERIAL) { 
+            Serial.print("Note On Received: noteNum = ");
+            Serial.print(noteNum); 
+            Serial.print(", Vel = ");
+            Serial.println(noteVel);
+          }
           //turnOnStatLight(STAT2);//turn on STAT2 light indicating that a note is active
           trueKeybed.addKeyPress(noteNum,noteVel);
           break;
@@ -146,19 +163,22 @@ void interpretCCMessage(const byte &controllerNumber, const byte &value_byte)
     
 //interpret the Mod Wheel messages
 void updateModWheel(const byte &value_byte) {
-  //right now, let's alter the basic voice timing...as an experiment
-  long newDuration_usec = 100; //minimum allowed voice duration...normal is 676usec
+  // re-use the aftertouch functionality
+  aftertouch_val = (int)value_byte;
   
-  //assume each increment in value_byte is worth 10 usec.  If value_byte spans 120, this will
-  //yield a total range of zero to 1200 usec
-  newDuration_usec += ((long)value_byte)*10L;
-  
-  if (value_byte > 120) {
-    newDuration_usec = 250000;
-  }
-  
-  //send he command to adjust the timing
-  adjustVoiceTimerDuration(newDuration_usec);
+//  //right now, let's alter the basic voice timing...as an experiment
+//  long newDuration_usec = 100; //minimum allowed voice duration...normal is 676usec
+//  
+//  //assume each increment in value_byte is worth 10 usec.  If value_byte spans 120, this will
+//  //yield a total range of zero to 1200 usec
+//  newDuration_usec += ((long)value_byte)*10L;
+//  
+//  if (value_byte > 120) {
+//    newDuration_usec = 250000;
+//  }
+//  
+//  //send he command to adjust the timing
+//  adjustVoiceTimerDuration(newDuration_usec);
 }
 
 void updateSustainPedal(const byte &value_byte) {

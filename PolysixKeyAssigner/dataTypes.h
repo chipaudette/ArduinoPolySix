@@ -13,8 +13,8 @@
 
 #define EMPTY_VOICE -999
 
-#define N_KEY_PRESS_DATA 6
-#define N_POLY 6
+#define N_KEY_PRESS_DATA 6   //should be 6
+#define N_POLY 6    //should be 6
 #define N_VOICE_SLOTS 8
 #define INDEX_LAST_VOICE (8)    //index of the last voice period
 #define INDEX_LAST_PERIOD (9)  //index of whatever is the last period
@@ -46,8 +46,6 @@
 #define OCTAVE_8FT (1)
 #define OCTAVE_4FT (2)
 
-#define PS_ACKI_PIN  (19)      //this is attached to an interrupt pin http://arduino.cc/en/Reference/AttachInterrupt 
-#define LFO_OUT_PIN (7) //pins 6, 7, 8 are controlled by Timer4 on the Mega 2560
 #define LFO_PWM_MICROS (200)
 #define LFO_BITS 10
 #define LFO_MAX 1024
@@ -83,6 +81,7 @@ class keyPressData_t {
     millis_t end_millis;    //when the key is released
     //int allocatedToVoice;   //index into voice structure holding this note
     int forceRetrigger;
+    int isNewVelocity;
     int isGateActive(void) {
       if ((isPressed==ON) | (isHeld==ON)) {
         return ON;
@@ -99,7 +98,7 @@ class keyPressData_t {
     };
     void reset(void) {
       noteNum = 0;  noteVel = 0;  isPressed = OFF;  isHeld = OFF; isLatched = OFF;
-      start_millis = 0;  end_millis = 0;  forceRetrigger = true;
+      start_millis = 0;  end_millis = 0;  forceRetrigger = true; isNewVelocity = OFF;
     };
 //    void copyFrom(const keyPressData_t &input) {
 //      noteNum = input.noteNum;      noteVel = input.noteVel;      isPressed = input.isPressed;      isHeld = input.isHeld;
@@ -121,6 +120,7 @@ typedef struct {
   millis_t start_millis; //when the note on the voice is started
   millis_t end_millis;   //when the note on the voice is ended
   int forceRetrigger;
+  int isNewVelocity;
 } voiceData_t;
 
 typedef struct {
@@ -140,6 +140,7 @@ typedef struct {
   int portamento;
   int detune;
   int keypanel_mode;
+  int velocity_sensitivity;
   arp_parameters_t arp_params;
 } assignerState_t;
 

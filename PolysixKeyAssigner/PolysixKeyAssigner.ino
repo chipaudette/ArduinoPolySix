@@ -3,6 +3,7 @@
  Polysix Key Assigner
  Author: Chip Audette
  First Created: Feb-Apr 2013
+ Extended:  Oct 2015, Velocity Processing
  
  Goal: Replace the functions performed by the 8049-217 microprocessor
  used by the Korg Polysix synthesizer.  This microprocessor is the
@@ -22,7 +23,7 @@
 #include "dataTypes.h"
 
 //Mapping of all the digital pins is defined in KeyAssignerPinMap
-#include <KeyAssignerPinMap.ino>
+//include <KeyAssignerPinMap.ino>
 
 /* This function places the current value of the heap and stack pointers in the
  * variables. You can call it from any place in your code and save the data for
@@ -106,8 +107,9 @@ void switchStateManager::printUpdateVals(const int &state, const int &debounceCo
 
 void setup() {
   //setup the serial bus
+  Serial2.begin(2*115200); //for communication to Arduino/Teensy doing velocity processing
   Serial3.begin(31200);  //set to 31200 for MIDI
-  Serial.begin(115200);  //for debugging
+  Serial.begin(115200);  //for debugging via USB
 
   //setup the pins that are plugging into the empty 8049-217 socket
   setupDigitalPins();
@@ -127,7 +129,7 @@ void setup() {
   Timer3.attachInterrupt(timer3_callback);  // attaches callback() as a timer overflow interrupt
   
   //setup interupt pin for arpeggiator Arpegiator and LFO
-  #define PS_ACKI_INT 4  //this is interrupt #2 http://arduino.cc/en/Reference/AttachInterrupt 
+  #define PS_ACKI_INT 4  //which interrupt?  On Mega 2560, #4 is on pin 19. http://arduino.cc/en/Reference/AttachInterrupt 
   attachInterrupt(PS_ACKI_INT, measureInterruptTiming, RISING); //measure the ARP timing
   //pinMode(LFO_OUT_PIN,OUTPUT);
   //Timer4.initialize(LFO_PWM_MICROS/2);
@@ -160,21 +162,21 @@ void loop(void) {
   
 }
 
-//adjust the duration of the voice timer
-void adjustVoiceTimerDuration(const long &newDuration_usec)
-{
-  static boolean firstTime=true;
-
-  #if 0
-    Timer3.setPeriod(newDuration_usec);
-    voiceDuration_usec = newDuration_usec;
-  #else
-    if (firstTime) {
-      if (DEBUG_TO_SERIAL) Serial.println("adjustVoiceTimerDuration: this is disabled.");
-      firstTime=false;
-    }
-  #endif
-}
+////adjust the duration of the voice timer
+//void adjustVoiceTimerDuration(const long &newDuration_usec)
+//{
+//  static boolean firstTime=true;
+//
+//  #if 0
+//    Timer3.setPeriod(newDuration_usec);
+//    voiceDuration_usec = newDuration_usec;
+//  #else
+//    if (firstTime) {
+//      if (DEBUG_TO_SERIAL) Serial.println("adjustVoiceTimerDuration: this is disabled.");
+//      firstTime=false;
+//    }
+//  #endif
+//}
 
 //here is the callback for pin attached to the Polysix's arp clock
 void measureInterruptTiming(void)

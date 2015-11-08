@@ -21,11 +21,18 @@
 #define PS_MC_PIN  44
 #define PS_ACKR_PIN  45
 #define PS_4FT_PIN  46
-#define PS_8FT_PIN  16
-#define PS_RESET_PIN 17
-
+//define PS_8FT_PIN  16
+//define PS_RESET_PIN 17
+#define PS_8FT_PIN  3    //moved Oct 2015 to free-up Serial2
+#define PS_RESET_PIN 4   //moved Oct 2015 to free-up Serial2
 #define SW_FROMTAPE_PIN 53
+#define PORTAMENTO_PEDAL_PIN 2
+#define SUSTAIN_PEDAL_PIN 18
+#define PS_ACKI_PIN  (19)      //this is attached to an interrupt #4 (see "PS_ACKI_INT" in PolysixKeyAssigner.ino)  http://arduino.cc/en/Reference/AttachInterrupt 
+//define LFO_OUT_PIN (7) //pins 6, 7, 8 are controlled by Timer4 on the Mega 2560
 
+
+//Define some constants
 #define BUT_ARP_FULL_BIT 7
 #define BUT_ARP_2OCT_BIT 6
 #define BUT_ARP_1OCT_BIT 5
@@ -45,8 +52,6 @@
 #define LED_CHORD_BIT 1
 #define LED_HOLD_BIT 0
 
-#define PORTAMENTO_PEDAL_PIN 2
-#define SUSTAIN_PEDAL_PIN 18
 
 #ifndef _SETUP_PS_HARDWARE_SERVICES
 #define _SETUP_PS_HARDWARE_SERVICES

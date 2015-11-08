@@ -1,6 +1,6 @@
 
 #include "dataTypes.h"
-#include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
+//include <KeyAssignerPinMap.ino>  //we need to know the pin mapping
 
 #define DEBUG_THIS_FILE false
 
@@ -20,6 +20,7 @@ void initAssignerState(void)
   assignerState.portamento = OFF;
   assignerState.detune = OFF;
   assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
+  assignerState.velocity_sensitivity = ON;
 };
 
 void initChordMemState(void)
@@ -650,6 +651,8 @@ void deactivateUnison(void)
   if (assignerState.arp == OFF) {
     for (int i=0;i<N_POLY;i++) {
       (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+      (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
+      (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
     }
   }
 }
@@ -677,6 +680,8 @@ void deactivateUnisonPoly(void)
   if (assignerState.arp == OFF) {
     for (int i=0;i<N_POLY;i++) {
       (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+      (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
+      (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
     }
   }
   
@@ -714,6 +719,8 @@ void deactivateChordMemory(void)
       if (chordMemState.isNoteActive[i]==HIGH) {
         //allKeybedData[i].noteNum = allVoiceData[i].noteNum;
         (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+        (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
+        (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
       }
     }
   }
