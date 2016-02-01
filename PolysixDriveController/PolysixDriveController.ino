@@ -12,7 +12,7 @@
   
   The two-channel AD5262 digipot is SPI-compatible.  To command it, you send
   one bit specifying which of the two potentiometers to use followed by one
-  byte specifyin the resistance value (0 - 255).  
+  byte specifying the resistance value (0 - 255).  
   
   The Arduino-relevant part of the digipot control circuit:
   * CS - to Arduino digital pin 10  (SS pin)
@@ -21,7 +21,7 @@
 
   This code also slows down the Arduino to 1MHz to save power.
   
-  Created 02 JAN 2016
+  Created JAN 2016
   by Chip Audette
 
 */
@@ -48,9 +48,14 @@
 
 // define program constants
 const int slaveSelectPin = 10; //set pin 10 as the slave select for the digital pot:
-#define N_OUT 16
-//attenuator setting  -10,  -8,  -6,  -4,  -2,  0,  +2,  +4,  +6,  +8,  +10, xx, xx, xx, xx, xx
-byte all_out_vals[] = {255, 125,  64,  32,  16,  0,   0,   0,   0,   0,    0,  0,  0,  0,  0,  0};
+
+//define the desired resistance values from the potentiometer
+float wiper_resist_ohm = 250.0;    //nominal resistance of the pot's wiper
+float total_resist_ohm = 20000.0;  //nominal total resistance of the pot
+#define N_OUT 16   //number of pot settings to define
+//attenuator setting    -10,    -8,   -6,    -4,    -2,     0,    +2,    +4,    +6,    +8,    +10,   xx,    xx,    xx,    xx,  xx
+float des_resist_ohm[] = { 0., 500., 1100., 3300., 5000., 10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.};
+byte all_out_vals[N_OUT];  //this will hold the byte value that will command the resistance values above
 
 // begin code
 void setup() {
@@ -69,44 +74,70 @@ void setup() {
   // set the slaveSelectPin as an output:
   pinMode (slaveSelectPin, OUTPUT);
   pinMode (slaveSelectPin, HIGH);
-  //pinMode(ledPin,OUTPUT);
-  //digitalWrite(ledPin,LED_ON);
-  
+    
   // initialize SPI:
   SPI.begin(); 
   SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+
+  //solve for potentiometer settings
+  for (int I=0; I<N_OUT; I++) {
+    float pot_frac = 1.0 - (des_resist_ohm[I]-wiper_resist_ohm)/total_resist_ohm;
+    all_out_vals[I] = byte(constrain(pot_frac*255.0,0.0,255.0));
+  }
 }
 
 
+byte prev_input_val=100;  //some large value
 void loop() {
 
   // read the 4-bit value for the Polysix's attenuator setting
-  int input_val = (digitalRead(2) << 3) || 
-                  (digitalRead(3) << 2) || 
-                  (digitalRead(4) << 1) || 
-                  (digitalRead(5) << 0);
+  byte input_val = (digitalRead(5) << 3) |  //bitwise "or"
+                  (digitalRead(4) << 2) |  //bitwise "or"
+                  (digitalRead(2) << 1) |  //bitwise "or"
+                  (digitalRead(3) << 0);
+
+
+  if (input_val != prev_input_val) {
+    prev_input_val = input_val;  //save for next time
+    
+    // choose the output value
+    byte out_val = 0;
+    if (input_val < N_OUT) out_val = all_out_vals[int(input_val)];
+    
   
-  // choose the output value
-  byte out_val = 0;
-  if (input_val < N_OUT) out_val = all_out_vals[input_val];
-  
-  //send value to first channel via SPI
-  digitalWrite(slaveSelectPin,LOW);// take the SS pin low to select the chip
-  SPI.transfer(0b00000000);  //first channel
-  SPI.transfer(out_val);//  send value via SPI:
-  digitalWrite(slaveSelectPin,HIGH);// take the SS pin high to de-select the chip
-  
-  if (1) {
-    //send value to first channel via SPI
-    delayMicroseconds(20);  //I don't know how much delay is needed (if any).
+    // print debug info
+  //  Serial.print("In = ");
+  //  Serial.print(input_val,BIN);
+  //  Serial.print(", In = ");
+  //  Serial.print(int(input_val));
+  //  Serial.print(", D2 = "); Serial.print(digitalRead(2));
+  //  Serial.print(", D3 = "); Serial.print(digitalRead(3));
+  //  Serial.print(", D4 = "); Serial.print(digitalRead(4));
+  //  Serial.print(", D5 = "); Serial.print(digitalRead(5));
+  //  Serial.print(", Out = ");
+  //  Serial.print(out_val);
+  //  Serial.println();
+    
+    
+    //send value to second channel via SPI
     digitalWrite(slaveSelectPin,LOW);// take the SS pin low to select the chip
     SPI.transfer(0b00000001);  //second channel
-    SPI.transfer(out_val);//  send value via SPI:
+    SPI.transfer(byte(out_val));//  send value via SPI:
     digitalWrite(slaveSelectPin,HIGH);// take the SS pin high to de-select the chip
+    
+    if (0) {
+      //send value to first channel via SPI
+      delayMicroseconds(20);  //I don't know how much delay is needed (if any).
+      digitalWrite(slaveSelectPin,LOW);// take the SS pin low to select the chip
+      SPI.transfer(0b00000000);  //first channel
+      SPI.transfer(out_val);//  send value via SPI:
+      digitalWrite(slaveSelectPin,HIGH);// take the SS pin high to de-select the chip
+    }
   }
   
   //wait a bit to slow things down (note that this wait time is multiplied by the pre-scaler!)
-  delay(20);  //comment out this line to go as fast as possible
+  //delay(20);  //comment out this line to go as fast as possible
+  delay(1);  //comment out this line to go as fast as possible
 }
 
 
