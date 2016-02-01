@@ -52,10 +52,14 @@ const int slaveSelectPin = 10; //set pin 10 as the slave select for the digital 
 //define the desired resistance values from the potentiometer
 float wiper_resist_ohm = 250.0;    //nominal resistance of the pot's wiper
 float total_resist_ohm = 20000.0;  //nominal total resistance of the pot
+float parallel_resist_ohm = 20000.0;  //in parallel with pot
 #define N_OUT 16   //number of pot settings to define
 //attenuator setting    -10,    -8,   -6,    -4,    -2,     0,    +2,    +4,    +6,    +8,    +10,   xx,    xx,    xx,    xx,  xx
-float des_resist_ohm[] = { 0., 500., 1100., 3300., 5000., 10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.};
-byte all_out_vals[N_OUT];  //this will hold the byte value that will command the resistance values above
+//float des_resist_ohm[] = { 0., 500., 1100., 3300., 5000., 10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.,10000.};
+//byte all_out_vals[N_OUT];  //this will hold the byte value that will command the resistance values above
+//byte all_out_vals[] = { 255,  232,  214,   180,   114,     3,     3,     3,     3,     3,      3,    3,      3,    3};   
+//byte all_out_vals[] = { 255,  252,  244,   212,   184,     40,     40,     40,   40,    40,     40,    40,     40,   40};   
+byte all_out_vals[] = { 255,  250,  242,   224,   184,     40,     40,     40,   40,    40,     40,    40,     40,   40};   
 
 // begin code
 void setup() {
@@ -80,10 +84,10 @@ void setup() {
   SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
 
   //solve for potentiometer settings
-  for (int I=0; I<N_OUT; I++) {
-    float pot_frac = 1.0 - (des_resist_ohm[I]-wiper_resist_ohm)/total_resist_ohm;
-    all_out_vals[I] = byte(constrain(pot_frac*255.0,0.0,255.0));
-  }
+//  for (int I=0; I<N_OUT; I++) {
+//    //float pot_frac = 1.0 - (des_resist_ohm[I]-wiper_resist_ohm)/total_resist_ohm;
+//    all_out_vals[I] = byte(constrain(pot_frac*255.0,0.0,255.0));
+//  }
 }
 
 
