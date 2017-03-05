@@ -6,7 +6,7 @@
 
   This code is written assuming the use of a Teensy 3.1.
   It might work for an Arduino UNO, as well, though the Uno might
-  not be fast enough.
+  not be fast enough (and the interrupt handlin will need to change).
 
   Controls the multiplexed envelope CV using a digital potentiometer.
   The setting for the digital pot is received from single-byte messages
@@ -47,6 +47,11 @@ volatile int cur_chan = 0;
 int chan_from_given_addr = 0;
 int chan_from_serial_comms = N_CHAN;  //default to something big
 
+// create a timer to ensure that this device periodically wakes
+//https://www.pjrc.com/teensy/td_timing_IntervalTimer.html
+IntervalTimer wakeTimer;
+void timerISR(void) {};  //do nothing here.  It'll automatically wake loop() function
+
 void setup() {
   //start serial for debugging
   //Serial.begin(115200);
@@ -77,6 +82,13 @@ void setup() {
   // initialize values
   setAllChannels((byte)255);
   isrService();      //initialize the output by forcing a call to the isrService
+
+  //in the loop() function, we'll put the device to sleep to save power.
+  //it will wake on *any* interrupt, which will usually come from the 
+  //interrupt attached to the INH_PIN.  But, in case there's a problem
+  //(or if we're testing this device unconnected to the partner device)
+  //let's setup a timer interrupt to ensure that this thing wakes
+  wakeTimer.begin(timerISR, 10000);  // blinkLED to run every 10000 microseconds (ie, every 10 milliseconds)
 }
 
 #define HWSERIAL Serial1
@@ -125,6 +137,8 @@ void loop() {
       interpretSerialByte((byte)serialValue);
     }
   }
+
+  asm(" WFI"); //go to sleep until the next interrupt...saves power
 }
 
 void setCurValuesToTestMode_descendingSteps(void) {
