@@ -70,6 +70,8 @@ void keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
   //create this note
   resetKeyPress(ind);
   createKeyPress(ind,noteNum,noteVel);
+
+  //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
 }
 
 int keybed_t::findOldestKeyPress_NotPressedNotHeld(void) {

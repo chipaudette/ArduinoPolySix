@@ -8,20 +8,20 @@
 //static assignerButtonState_t prev_but_state;
 //static assignerButtonState_t but_state_changed;
 
-void initAssignerState(void)
-{
-  assignerState.arp=OFF;
-  assignerState.poly=ON;
-  assignerState.unison=OFF;
-  assignerState.chord_mem=OFF;
-  assignerState.hold=HOLD_STATE_OFF;
-  assignerState.octave = OCTAVE_16FT;
-  assignerState.legato = OFF;
-  assignerState.portamento = OFF;
-  assignerState.detune = OFF;
-  assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
-  assignerState.velocity_sensitivity = ON;
-};
+//void initAssignerState(void)
+//{
+//  assignerState.arp=OFF;
+//  assignerState.poly=ON;
+//  assignerState.unison=OFF;
+//  assignerState.chord_mem=OFF;
+//  assignerState.hold=HOLD_STATE_OFF;
+//  assignerState.octave = OCTAVE_16FT;
+//  assignerState.legato = OFF;
+//  assignerState.portamento = OFF;
+//  assignerState.detune = OFF;
+//  assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
+//  assignerState.velocity_sensitivity = ON;
+//};
 
 void initChordMemState(void)
 {
@@ -43,7 +43,7 @@ void updateKeyAssignerStateFromButtons(assignerButtonState2_t &cur_but_state)
   int prePedal_porta_state = OFF;
   int prePedal_porta_setting_index = 0;
 
-  //update the keypanel mode
+  //update the keypanel mode...interpret as arp mode or as standard/other mode?
   updateKeyPanelMode(cur_but_state);
 
   //update arpeggiator on/off status
@@ -173,7 +173,7 @@ void updateKeyPanelMode(assignerButtonState2_t &cur_but_state)
 //        int mode = ARP_SORTMODE_NOTENUM;
 //        if (assignerState.hold == ON) {
 //          mode = ARP_SORTMODE_STARTTIME;
-//          arpManager.startArp(mode,assignerState,deactivateHold); //tell the arp to deactivate the hold after it updates the notes for the ARP
+//          arpManager.startArp(mode,assignerState,deactivateHoldState); //tell the arp to deactivate the hold after it updates the notes for the ARP
 //        } else {
 //          arpManager.startArp(mode,assignerState); //the basic start arp command
 //        }
@@ -340,7 +340,7 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
 
 
 //update the arpeggiator state based on the arp button presses and the switches
-void  updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state) 
+void updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state) 
 {
   static micros_t prev_knob_value = 0L;
   static int diff_knob_thresh = 100;
@@ -365,7 +365,7 @@ void  updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state)
         int mode = ARP_SORTMODE_NOTENUM;
         if (assignerState.hold == ON) {
           mode = ARP_SORTMODE_STARTTIME;
-          arpManager.startArp(mode,assignerState,deactivateHold); //tell the arp to deactivate the hold after it updates the notes for the ARP
+          arpManager.startArp(mode,assignerState,deactivateHoldState); //tell the arp to deactivate the hold after it updates the notes for the ARP
         } else {
           arpManager.startArp(mode,assignerState); //the basic start arp command
         }
@@ -395,6 +395,19 @@ void  updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state)
       if (val > -1) {
         arpManager.setArpGate_x7bits(val);
         cur_but_state.arp_on.set_user_beenPressedAgainToFalse(); //this means that the arp on/off won't toggle when you finally release the arp button
+      }
+    }
+  } else { //assigner state is in "other" (non-ARP) mode....in this mode, combo presses with Arpeggio controls velocity sensitivity
+    if (cur_but_state.arp_on.state == ON) {
+       //check to see if any of the other four assigner state buttons are pressed
+      int val = -1;
+      if (cur_but_state.hold.state == ON) val = assignerState_t::MIN_VELOCITY_SENS;  //one quarter of 127
+      if (cur_but_state.chord_mem.state == ON) val = (int)map(35, 0, 100, assignerState_t::MIN_VELOCITY_SENS, assignerState_t::MAX_VELOCITY_SENS);
+      if (cur_but_state.unison.state == ON) val = (int)map(60, 0, 100, assignerState_t::MIN_VELOCITY_SENS, assignerState_t::MAX_VELOCITY_SENS);
+      if (cur_but_state.poly.state == ON) val = assignerState_t::MAX_VELOCITY_SENS;
+ 
+      if (val > -1) {
+        assignerState.velocity_sens_8bit = val;
       }
     }
   }
@@ -539,19 +552,19 @@ void updateHoldState(assignerButtonState2_t &cur_but_state)
   //check to see if button is released...if state is OFF and button is released, go into normal hold mode
   if (cur_but_state.hold.wasJustReleased() == true) {
     if (assignerState.hold == HOLD_STATE_OFF) {
-      activateHold(); //hold current and future notes
+      activateHoldState(); //hold current and future notes
     } else {
-      deactivateHold();
+      deactivateHoldState();
     }
   }
 }
 
 //actiavte hold.  default is to activate current and future notes.  
 //  enableHoldState=false only does current notes, not future
-void activateHold(void) {
-  activateHold(true);
+void activateHoldState(void) {
+  activateHoldState(true);
 }
-void activateHold(boolean enableHoldState) {
+void activateHoldState(boolean enableHoldState) {
   keyPressData_t *keyPress;
 
   //Serial.println("stateManagement: activate hold...");
@@ -567,7 +580,7 @@ void activateHold(boolean enableHoldState) {
   if (enableHoldState) assignerState.hold = HOLD_STATE_ON;
 }
 
-void deactivateHold(void) {
+void deactivateHoldState(void) {
 
   //Serial.println("stateManagement: de-activate hold.");
 
@@ -588,10 +601,10 @@ void updateHoldStateMIDI(int const &desired_hold_state) {
     Serial.println(desired_hold_state);
   }
   if (desired_hold_state==ON) {
-    activateHold();
+    activateHoldState();
   } else {
     //Serial.println("stateManagement: updateHoldStateMIDI: deactivateHold...");
-    deactivateHold();
+    deactivateHoldState();
   }
 }
 
@@ -599,12 +612,12 @@ void updateFootswitchHoldState(int const &desired_hold_state,int const &didState
   if (didStateChange == true) {
     if (desired_hold_state == ON) {
       if (assignerState.hold == HOLD_STATE_OFF) {
-        activateHold();
+        activateHoldState();
       }
     } else {
       if (assignerState.hold == HOLD_STATE_ON) {
         //Serial.println("stateManagement: updateFootswitchHoldState: deactivateHold");
-        deactivateHold();
+        deactivateHoldState();
       }
     }
   }

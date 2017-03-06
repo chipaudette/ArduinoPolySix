@@ -187,7 +187,7 @@ void readButtons(void)
   byte Psense_AhighBlow = PS_PSENSE_PORT; //button press makes it LOW, so flip the bits to make it HIGH
 
   //interpret the readings
-  interpretBytesForSwitch(Psense_AlowBhigh,Psense_AhighBlow);
+  interpretBytesForSwitch(Psense_AlowBhigh,Psense_AhighBlow,assignerButtonState); //results passed back through assignerButtonState
 
   //read and interpret the octave switch
   assignerState.octave = OCTAVE_16FT;
@@ -206,7 +206,7 @@ void readButtons(void)
 //This routine does not actually cause any of effects that the switches are 
 //intended to cause.  That must be done in another routine.
 #define BUTSTATE_FROM_BIT(x,y) (!(bitRead(x,y)))  //a LOW means that the button has been pressed
-void interpretBytesForSwitch(const byte &Psense_AlowBhigh,const byte &Psense_AhighBlow)
+void interpretBytesForSwitch(const byte &Psense_AlowBhigh,const byte &Psense_AhighBlow, assignerButtonState2_t &assignerButtonState)
 { 
   static boolean firstTime=true;
 
@@ -269,6 +269,7 @@ void set_ACKR(const int &ACKR) {
 //set the LED pins depending upon which buttons are active right now
 #define SHOW_ASSIGNER_STATE (1)
 #define SHOW_ARPGATE_LENGTH (2)
+#define SHOW_VELOCITY_SENSITIVITY (3)
 void setLEDPins()
 {
   static boolean firstTime=true;
@@ -288,9 +289,12 @@ void setLEDPins()
   } 
   else {
     if (assignerState.detune > OFF) bitClear(LED_out,LED_ARP_BIT); //clear the bit to turn on the LED
+    if (assignerButtonState.arp_on.state == ON) whatToShow = SHOW_VELOCITY_SENSITIVITY;
   }
   
   //set the other LEDs based what we want to show
+  int val;
+  int LED_BIT;
   switch (whatToShow) {
     case SHOW_ASSIGNER_STATE:
       if (assignerState.poly > OFF) bitClear(LED_out,LED_POLY_BIT);//clear the bit to turn on the LED
@@ -310,13 +314,30 @@ void setLEDPins()
       }
       break;
     case SHOW_ARPGATE_LENGTH:
-      int val = arpManager.getArpGate_x7bits();
-      int LED_BIT = LED_POLY_BIT;
+      val = arpManager.getArpGate_x7bits();
+      LED_BIT = LED_POLY_BIT;
       if (val < 32) {
         LED_BIT = LED_HOLD_BIT;
       } else if (val < 64) {
          LED_BIT = LED_CHORD_BIT;
       } else if (val < 96) {
+         LED_BIT = LED_UNISON_BIT;
+      } else {
+        LED_BIT = LED_POLY_BIT;
+      }
+      bitClear(LED_out,LED_BIT);  //turn on the light
+      if (PWM_counter < LED_PWM_PERIOD) {
+        bitSet(LED_out,LED_BIT); //turn it back off
+      }
+      break;
+    case SHOW_VELOCITY_SENSITIVITY:
+      val = assignerState.velocity_sens_8bit;
+      LED_BIT = LED_POLY_BIT;
+      if (val < 32) {
+        LED_BIT = LED_HOLD_BIT;
+      } else if (val < 127) {
+         LED_BIT = LED_CHORD_BIT;
+      } else if (val < 200) {
          LED_BIT = LED_UNISON_BIT;
       } else {
         LED_BIT = LED_POLY_BIT;

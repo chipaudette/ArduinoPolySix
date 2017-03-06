@@ -448,7 +448,7 @@ void arpManager_t::updateArp(const assignerState_t &localAssignerState)
   
   //issue the post-note-update function
   if ((executePostNoteUpdateFunction==true) & (p_postNoteUpdateFunction != NULL)) {
-    p_postNoteUpdateFunction(); //usually this is the disableHold() function from the stateManager
+    p_postNoteUpdateFunction(); //usually this is the disableHoldState() function from the stateManager
     executePostNoteUpdateFunction = false;  //reset the flag so that we don't do this again next time through
   }
 

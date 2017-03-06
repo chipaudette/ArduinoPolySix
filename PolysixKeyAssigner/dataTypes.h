@@ -1,5 +1,8 @@
 
 
+#ifndef _data_types_h
+#define _data_types_h
+
 //define some global macros
 
 #define DEBUG_TO_SERIAL (false)
@@ -31,7 +34,7 @@
 #define HOLD_STATE_ON (1)
 #define HOLD_STATE_ON_BUT_NO_NEW (2)
 #define DEFAULT_ON_VEL 128;
-#define RELEASE_VELOCITY_FROM_HOLD (96)  //could be zero to 128
+#define RELEASE_VELOCITY_FROM_HOLD (96)  //could be zero to 127
 #define KEYPANEL_MODE_ARP (1)
 #define KEYPANEL_MODE_OTHER (2)
 
@@ -66,8 +69,8 @@ typedef long int int32_t;
 
 //define data structure for describing key presses
 //define UNASSIGNED_TO_VOICE -1
-#ifndef _KEYPRESS_TYPES
-#define _KEYPRESS_TYPES
+//ifndef _KEYPRESS_TYPES
+//define _KEYPRESS_TYPES
 class keyPressData_t {
   public:
     keyPressData_t(void) { reset(); };
@@ -129,20 +132,43 @@ typedef struct {
   int arp_range;
 } arp_parameters_t;
 
-typedef struct {
-  int arp;
-  int poly;
-  int unison;
-  int chord_mem;
-  int hold;
-  int octave;
-  int legato;
-  int portamento;
-  int detune;
-  int keypanel_mode;
-  int velocity_sensitivity;
-  arp_parameters_t arp_params;
-} assignerState_t;
+class assignerState_t {
+  public:
+    assignerState_t(void) {
+      init();
+    }
+    void init(void) {
+      arp=OFF;
+      poly=ON;
+      unison=OFF;
+      chord_mem=OFF;
+      hold=HOLD_STATE_OFF;
+      octave = OCTAVE_16FT;
+      legato = OFF;
+      portamento = OFF;
+      detune = OFF;
+      keypanel_mode = KEYPANEL_MODE_ARP;
+      velocity_sens_8bit = MAX_VELOCITY_SENS;
+    };
+    int arp;
+    int poly;
+    int unison;
+    int chord_mem;
+    int hold;
+    int octave;
+    int legato;
+    int portamento;
+    int detune;
+    int keypanel_mode;
+    int velocity_sens_8bit;
+  
+    static const int MIN_VELOCITY_SENS;
+    static const int MAX_VELOCITY_SENS;
+    
+    arp_parameters_t arp_params;
+} ;
+const int assignerState_t::MIN_VELOCITY_SENS = 0;  //for velocity_sens_8bit
+const int assignerState_t::MAX_VELOCITY_SENS = 255; //velocity_sens_8bit
 
 typedef struct {
   int state;
@@ -240,19 +266,22 @@ class pushButtonStateManager : public switchStateManager {
 };
 
 
-typedef struct {
-  switchStateManager arp_range;
-  switchStateManager arp_dir;
-  switchStateManager arp_latch;
-  pushButtonStateManager arp_on;
-  pushButtonStateManager poly;
-  pushButtonStateManager unison;
-  pushButtonStateManager chord_mem;
-  pushButtonStateManager hold;
-  pushButtonStateManager sustainPedal;
-  pushButtonStateManager portamentoPedal;
-  pushButtonStateManager fromTapeToggle;
-} assignerButtonState2_t;
+class assignerButtonState2_t {
+  public:
+    assignerButtonState2_t(void) {};  //empty constructor
+    
+    switchStateManager arp_range;
+    switchStateManager arp_dir;
+    switchStateManager arp_latch;
+    pushButtonStateManager arp_on;
+    pushButtonStateManager poly;
+    pushButtonStateManager unison;
+    pushButtonStateManager chord_mem;
+    pushButtonStateManager hold;
+    pushButtonStateManager sustainPedal;
+    pushButtonStateManager portamentoPedal;
+    pushButtonStateManager fromTapeToggle;  
+};
 
 typedef struct {
   int noteShift[N_POLY];

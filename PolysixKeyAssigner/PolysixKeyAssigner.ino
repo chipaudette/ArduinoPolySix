@@ -117,7 +117,8 @@ void setup() {
   //initialize data structures
   //initAssigerButtonState(assignerButtonState);
   //copyAssignerButtonState(assignerButtonState,prevAssignerButtonState);
-  initAssignerState();
+  //initAssignerState();
+  assignerState.init();
   initChordMemState();
   initializeVoiceData(allVoiceData,N_POLY);
   
