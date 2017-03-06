@@ -247,11 +247,11 @@ void updateKeyPanelMode(assignerButtonState2_t &cur_but_state)
 //}
 
 //Update the Poly/Unison/Chord state...
-//Note: ignore all button presses if the hold button is pressed.  If the hold button is pressed,
-//It means that we're in some complex hold-related command mode
+//Note: ignore all button presses if the arp button is pressed.  If the arp button is pressed,
+//It means that we're in some complex arp-button-related command mode
 void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
 {
-  static int prevState = STATE_POLY;
+  static int prevState = STATE_POLY;  //static variable is saved throughout time.  Initialize on first time to poly mode.
   int newState = 0;
   boolean stateChanged = true;
   //static boolean stateButtonPreviouslyReleased = true;
@@ -640,7 +640,7 @@ void activatePoly(boolean const &stateChanged)
   assignerState.chord_mem = OFF;
 
   if (stateChanged==true) {
-    Serial.println("activatePoly: stateChanged is true.");
+    //Serial.println("activatePoly: stateChanged is true.");
     assignerState.legato = OFF;
     assignerState.detune = OFF; 
   }
@@ -652,8 +652,11 @@ void activateUnison(boolean const &stateChanged)
   assignerState.unison = ON;
   assignerState.chord_mem = OFF;
 
+  //change the number of voices that are tracked by the keybed to one
+  trueKeybed.set_nKeyPressSlots(1);
+
   if (stateChanged==true) {
-    Serial.println("activaeUnison: stateChanged is true.");
+    //Serial.println("activateUnison: stateChanged is true.");
     assignerState.legato = OFF;
   }
 }
@@ -668,6 +671,9 @@ void deactivateUnison(void)
       (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
     }
   }
+
+  //tell the keybed to track N_POLY notes again
+  trueKeybed.set_nKeyPressSlots(N_KEY_PRESS_DATA);
 }
 
 void activateUnisonPoly(boolean const &stateChanged)
@@ -678,11 +684,11 @@ void activateUnisonPoly(boolean const &stateChanged)
   
   //change the number of voices that are tracked by the keybed to three
   trueKeybed.set_nKeyPressSlots(3);
-  Serial.print("activateUnisonPoly: activated!  nKeyPressSlots = ");
-  Serial.println(trueKeybed.get_nKeyPressSlots());
+  //Serial.print("activateUnisonPoly: activated!  nKeyPressSlots = ");
+  //Serial.println(trueKeybed.get_nKeyPressSlots());
 
   if (stateChanged==true) {
-    Serial.println("activaeUnisonPoly: stateChanged is true.");
+    //Serial.println("activaeUnisonPoly: stateChanged is true.");
     assignerState.legato = OFF;
   }
 }
@@ -698,7 +704,7 @@ void deactivateUnisonPoly(void)
     }
   }
   
-  //all the keybed to track N_POLY notes again
+  //tell the keybed to track N_POLY notes again
   trueKeybed.set_nKeyPressSlots(N_KEY_PRESS_DATA);
 }
 
