@@ -297,10 +297,10 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
     } else if (prevState == STATE_CHORD) {
       Serial.println("updatePolyUnisonChordState: Disabling Chord Mem");
       deactivateChordMemory();
-    } else if (prevState = STATE_UNISON_POLY) {
+    } else if (prevState == STATE_UNISON_POLY) {
       Serial.println("updatePolyUnisonChordState: Disabling Unison Poly");
       deactivateUnisonPoly();
-    } else if (prevState = STATE_CHORD_POLY) {
+    } else if (prevState == STATE_CHORD_POLY) {
       Serial.println("updatePolyUnisonChordState: Disabling Chord Poly");
       deactivateChordPoly();
     }
@@ -308,24 +308,29 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
     //activate the new state
     switch (newState) {
       case STATE_POLY:
+        Serial.println("updatePolyUnisonChordState: activate Poly mode.");
         activatePoly(stateChanged);
         //if (newState != prevState) cur_but_state.poly.user_beenReleased = false;  //because button was just pressed
         //if (stateChanged) cur_but_state.poly.user_beenReleased = false;  //because button was just pressed
         break;
-      case STATE_UNISON: 
+      case STATE_UNISON:
+        Serial.println("updatePolyUnisonChordState: activate Unison mode.");
         activateUnison(stateChanged);
         //if (newState != prevState) cur_but_state.unison.user_beenReleased = false;//because button was just pressed
         //if (stateChanged) cur_but_state.unison.user_beenReleased = false;//because button was just pressed
         break;
-      case STATE_CHORD:
+      case STATE_CHORD:     
+        Serial.println("updatePolyUnisonChordState: activate Chord_Mem mode.");
         activateChordMemory(stateChanged);
         //if (newState != prevState) cur_but_state.chord_mem.user_beenReleased = false;//because button was just pressed
         //if (stateChanged) cur_but_state.chord_mem.user_beenReleased = false;//because button was just pressed
         break;
       case STATE_UNISON_POLY:
+        Serial.println("updatePolyUnisonChordState: activate UnisonPoly mode.");
         activateUnisonPoly(stateChanged);
         break;
       case STATE_CHORD_POLY:
+        Serial.println("updatePolyUnisonChordState: activate ChordPoly mode.");
         activateChordPoly(stateChanged);
         break;
     }
@@ -653,7 +658,7 @@ void activateUnison(boolean const &stateChanged)
   assignerState.chord_mem = OFF;
 
   //change the number of voices that are tracked by the keybed to one
-  trueKeybed.set_nKeyPressSlots(1);
+  //trueKeybed.set_nKeyPressSlots(1);
 
   if (stateChanged==true) {
     //Serial.println("activateUnison: stateChanged is true.");
