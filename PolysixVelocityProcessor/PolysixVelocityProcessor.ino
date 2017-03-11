@@ -8,7 +8,7 @@
   It might work for an Arduino UNO, as well, though the Uno might
   not be fast enough (and the interrupt handlin will need to change).
 
-  Controls the multiplexed envelope CV using a digital potentiometer.
+  Controls the multiplexed envelope CV using an 8-bit digital potentiometer.
   The setting for the digital pot is received from single-byte messages
   received by the Teensy over its TTL serial (Serial1) or over USB serial.
 
@@ -88,7 +88,7 @@ void setup() {
   //interrupt attached to the INH_PIN.  But, in case there's a problem
   //(or if we're testing this device unconnected to the partner device)
   //let's setup a timer interrupt to ensure that this thing wakes
-  wakeTimer.begin(timerISR, 10000);  // blinkLED to run every 10000 microseconds (ie, every 10 milliseconds)
+  //wakeTimer.begin(timerISR, 1000);  // blinkLED to run every 1000 microseconds (ie, every 1 milliseconds)
 }
 
 #define HWSERIAL Serial1
@@ -99,31 +99,31 @@ void loop() {
   //testSpeedISR();  // use this to see how fast the pot servicing could possibly be
 
 
-  if (digitalRead(TEST1_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_oneChannel(1 - 1);
-  } else if (digitalRead(TEST2_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_oneChannel(2 - 1);
-  } else if (digitalRead(TEST3_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_oneChannel(3 - 1);
-  } else if (digitalRead(TEST4_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_oneChannel(4 - 1);
-  } else if (digitalRead(TEST5_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_oneChannel(5 - 1);
-  } else if (digitalRead(TEST6_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_oneChannel(6 - 1);
-  } else if (digitalRead(TEST7_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setCurValuesToTestMode_descendingSteps();
-  } else if (digitalRead(TEST8_PIN) == LOW) {
-    //the user has pulled this pin LOW.  Go into test mode.
-    setAllChannels((byte)255);
-  } else {
+//  if (digitalRead(TEST1_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_oneChannel(1 - 1);
+//  } else if (digitalRead(TEST2_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_oneChannel(2 - 1);
+//  } else if (digitalRead(TEST3_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_oneChannel(3 - 1);
+//  } else if (digitalRead(TEST4_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_oneChannel(4 - 1);
+//  } else if (digitalRead(TEST5_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_oneChannel(5 - 1);
+//  } else if (digitalRead(TEST6_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_oneChannel(6 - 1);
+//  } else if (digitalRead(TEST7_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setCurValuesToTestMode_descendingSteps();
+//  } else if (digitalRead(TEST8_PIN) == LOW) {
+//    //the user has pulled this pin LOW.  Go into test mode.
+//    setAllChannels((byte)255);
+//  } else {
     //we are not in test mode.  Normal behavior.
 
     //service Serial (both USB and hardware
@@ -136,9 +136,9 @@ void loop() {
       serialValue = HWSERIAL.read();
       interpretSerialByte((byte)serialValue);
     }
-  }
+//  } //end the if block for all the test modes
 
-  asm(" WFI"); //go to sleep until the next interrupt...saves power
+  //asm(" WFI"); //go to sleep until the next interrupt...saves power
 }
 
 void setCurValuesToTestMode_descendingSteps(void) {
