@@ -269,11 +269,13 @@ int remapVelocityValues(const int &vel_in, const int &vel_sens_8bit) {
   //When sensitivity is zero, the return value should be HIGH_OUT.
   //So, really, we are scaling the difference between the given vel and the MAX_VEL
   //note: vel_sens_8bit should be 0 (no sensitivity) to 255 (max sensitivity)
-  vel = HIGH_OUT - vel;  
-  vel = (vel * vel_sens_8bit) >> 8;
-  vel = constrain(HIGH_OUT - vel, LOW_OUT, HIGH_OUT);
+  int vel_out = HIGH_OUT - vel;  
+  vel_out = (vel_out * vel_sens_8bit) >> 8;
+  vel_out = constrain(HIGH_OUT - vel_out, LOW_OUT, HIGH_OUT);
+
+  //Serial.print("remapVel: "); Serial.print(vel_in); Serial.print(" "); Serial.print(vel); Serial.print(" "); Serial.print(vel_sens_8bit); Serial.print(" "); Serial.print(vel_out); Serial.println();
   
-  return vel;
+  return vel_out;
 }
 
 //Note: "voiceInd" is 1-8, not 0-7
@@ -291,6 +293,7 @@ void sendVelocityData_2byte(const int &voiceInd, const int &note_vel_in, const i
 
   //second byte: leading 0, then velocity value (7-bit...which is the MIDI standard)
   byte byteOut2 = 0b01111111 & ((byte)vel);  //force first bit to zero, just in case
+
   Serial2.write(byteOut2);
 
   //  Serial.print(voiceInd);
