@@ -15,8 +15,7 @@
 byte byte1, byte2,byte3;
 int noteNum, noteVel;
 //const int noteTranspose = -27;
-void serviceSerial(void) {
-  
+void serviceSerial3(void) {
   //Are there any MIDI messages?
   if(Serial3.available() > 0)
   {
@@ -30,11 +29,12 @@ void serviceSerial(void) {
       //Serial.println("Timing Signal Received. 1.");
     } else {
       if (ECHOMIDI) Serial.write(byte1);
-      
+
+      //is it one of the other bytes that we know what to do with?
       if ((byte1 == 0x90) | (byte1 == 0x80) | (byte1 == 0xB0) | (byte1 == 0xD0)) {
         
         //wait and read 2nd byte in message
-        byte2 = 0xF8;
+        byte2 = 0xF8;  //default value...should get overwritten
         while (byte2 == 0xF8) { while (Serial3.available() == 0); byte2 = Serial3.read(); }
         noteNum = (int)byte2;
         if (ECHOMIDI) Serial.write(byte2);
@@ -44,7 +44,7 @@ void serviceSerial(void) {
           byte3 = 0;
         } else {
           //wait and read 3nd byte in message
-          byte3 = 0xF8;
+          byte3 = 0xF8;  //default value...should get ovewritten
           while (byte3 == 0xF8) { while (Serial3.available() == 0); byte3 = Serial3.read(); }
           noteVel = (int)byte3;
           if (ECHOMIDI) Serial.write(byte3);
@@ -83,9 +83,9 @@ void serviceSerial(void) {
         case 0x90:
           //note on message
           if (DEBUG_TO_SERIAL) { 
-            Serial.print("Note On Received: noteNum = ");
+            Serial.print(F("Note On Received: noteNum = "));
             Serial.print(noteNum); 
-            Serial.print(", Vel = ");
+            Serial.print(F(", Vel = "));
             Serial.println(noteVel);
           }
           //turnOnStatLight(STAT2);//turn on STAT2 light indicating that a note is active
@@ -94,14 +94,14 @@ void serviceSerial(void) {
           
         case 0x80:
           //note off
-          if (DEBUG_TO_SERIAL) Serial.println("Note Off Message Received");
+          if (DEBUG_TO_SERIAL) Serial.println(F("Note Off Message Received"));
           //turnOffStatLight(STAT2);//turn off light that had been indicating that a note was active
           trueKeybed.stopKeyPress(noteNum,noteVel);
           break;
         
         case 0xB0:
           //CC changes (mod wheel, footswitch, etc)
-          if (DEBUG_TO_SERIAL) Serial.println("CC Message Received");
+          if (DEBUG_TO_SERIAL) Serial.println(F("CC Message Received"));
           interpretCCMessage(byte2,byte3);
           break;
           
@@ -150,9 +150,9 @@ void interpretCCMessage(const byte &controllerNumber, const byte &value_byte)
     default:
       //this CC # is not yet handled
       if ((DEBUG_TO_SERIAL) & (!warningMessageIssued[(int)controllerNumber])) {
-        Serial.print("serialMIDIProcessing: CC# 0x");
+        Serial.print(F("serialMIDIProcessing: CC# 0x"));
         Serial.print(controllerNumber,HEX);
-        Serial.println(" not yet handled.");
+        Serial.println(F(" not yet handled."));
         warningMessageIssued[(int)controllerNumber] = true;
       }
   }

@@ -24,7 +24,7 @@ void initializeVoiceData(voiceData_t voiceData[], const int &N)
 }
 
 //generic function to do the servicing
-int voicePeriodIndex = 0;  //9 periods...V1-V6, Vx7, Vx8, Inter-Voice (IV)
+int voicePeriodIndex = 0;  //9 periods...V1-V6, Vx7, Vx8, and then Inter-Voice (IV)
 millis_t totalMicros = 0, fooMicros = 0;;
 int voice_count = 0;
 void serviceNextVoicePeriod(void)
@@ -106,7 +106,8 @@ int32_t getPitchAdjust(const int &voiceInd)
   int32_t pitchAdjust_notes_x16bits = 0;
 
   pitchAdjust_notes_x16bits = ((int32_t)BIAS_PITCH_NOTES) << 16;  //positive drops the pitch
-  pitchAdjust_notes_x16bits -= (2L << 16) / 2L; //adjust tuning...move higher by half a half-step.  Negative numbers move the pitch higher
+  //pitchAdjust_notes_x16bits -= (2L << 16) / 2L; //adjust tuning...move higher by half a half-step.  Negative numbers move the pitch higher
+  pitchAdjust_notes_x16bits -= (1L << 16); //adjust tuning...move higher.  Negative numbers move the pitch higher
   if (voiceInd != 7) {
     pitchAdjust_notes_x16bits -= porta_noteBend_x16bits; //negative raises the pitch
     pitchAdjust_notes_x16bits -= LFO_noteBend_x16bits; //negative raises the pitch
@@ -149,6 +150,7 @@ byte getPitchByte(const int &voiceInd)
 {
   int32_t targNoteNum_x16bits = 0;  //zero is lowest note on the Polysix
   int32_t curNoteNum_x16bits = 0; //128
+  int32_t tuningCorrection_x16bits = 0;  //zero is no pitch adjustment
 #define NoteNumOffsetForRounding (32768L)  // (2^(16 bits)-1) / 2 = (32768) 
 
   if (voiceInd == 7) {
@@ -161,13 +163,15 @@ byte getPitchByte(const int &voiceInd)
       curNoteNum_x16bits = allVoiceData[0].curNoteNum_x16bits; //this is the value last used for note 0, so that's all we need
     } else {
       //for voices 1-6, get the note number of the current voice index (where C0 on the Polysix s zero)
-      targNoteNum_x16bits = ((long)allVoiceData[voiceInd - 1].noteNum) << 16; //target pitch
+      int noteNum = allVoiceData[voiceInd-1].noteNum;
       if (assignerState.octave == OCTAVE_8FT) {
-        targNoteNum_x16bits += (12L << 16);
+        noteNum += 12;
       } else if (assignerState.octave == OCTAVE_4FT) {
-        targNoteNum_x16bits += (24L << 16);
+        noteNum += 24;
       }
-      curNoteNum_x16bits = allVoiceData[voiceInd - 1].curNoteNum_x16bits; //current pitch
+      targNoteNum_x16bits = ((long)noteNum) << 16; //target pitch
+      tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,noteNum); //voiceInd starts at one.
+      curNoteNum_x16bits = allVoiceData[voiceInd-1].curNoteNum_x16bits; //current pitch
 
       //compute portamento
       int32_t des_jump = targNoteNum_x16bits - curNoteNum_x16bits;
@@ -193,6 +197,9 @@ byte getPitchByte(const int &voiceInd)
     }
   }
 
+  //adjust the pitch based on the pitch correction
+  curNoteNum_x16bits += tuningCorrection_x16bits;  //note that a positive correction results in downward pitch, so change the sign here
+
   //get the byte to output
   int outNoteNum = (int)((curNoteNum_x16bits + (NoteNumOffsetForRounding - 1)) >> 16);
   //int outNoteNum = (int)(curNoteNum_x16bits >> 16);
@@ -205,6 +212,42 @@ byte getPitchByte(const int &voiceInd)
   //}
 
   return ((byte)outNoteNum);
+}
+
+int countCalls[N_VOICE_SLOTS];
+int32_t getTuningCorrection(int voiceInd, int noteNum) { //voiceInd is referenced to zero, not one
+  int foo_lowOctIndex = min(N_OCTAVES_TUNING-1,max(0,noteNum / 12));
+  int foo_highOctIndex = min(N_OCTAVES_TUNING,foo_lowOctIndex+1);
+  int32_t tuneFactorLow_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex];
+  int32_t tuneFactorHigh_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex];
+
+  //choose the tuning factor
+  int32_t tuningCorrection_x16bits = 0; 
+  if (noteNum <= foo_lowOctIndex*12) {
+      //at or below the bottom of the range, so just use the low value
+      tuningCorrection_x16bits = tuneFactorLow_x16bits; 
+  } else if (noteNum >= foo_highOctIndex*12) {
+      //at or above the top of the range, so just use the high value
+      tuningCorrection_x16bits = tuneFactorHigh_x16bits; 
+  } else {
+      //we're within the working range, so interpolate
+      tuningCorrection_x16bits = tuneFactorLow_x16bits + \
+       (((tuneFactorHigh_x16bits - tuneFactorLow_x16bits) * (noteNum - (foo_lowOctIndex*12))) / 12);
+  }
+
+  #if 0
+  countCalls[voiceInd]++;
+  if (countCalls[voiceInd] > 1000) {
+    countCalls[voiceInd] = 0;
+    Serial.print(F("getTuningCorrection["));Serial.print(voiceInd);
+    Serial.print(F("], noteNum ")); Serial.print(noteNum);
+    Serial.print(F(", oct [")); Serial.print(foo_lowOctIndex);
+    Serial.print(F(",")); Serial.print(foo_highOctIndex);
+    Serial.print(F("], tune fac ")); Serial.println(tuningCorrection_x16bits); 
+  }
+  #endif
+  
+  return tuningCorrection_x16bits;
 }
 
 //
@@ -418,7 +461,7 @@ void allocateVoiceForPoly(keybed_t *keybed)
   int nVoices = keybed->get_nKeyPressSlots();
 
   //there are only six voices and six keypress slots, so just pass them through
-  for (int Ivoice = 0; Ivoice < nVoices; Ivoice++) {
+  for (int Ivoice = 0; Ivoice < nVoices; Ivoice++) { //Ivoice starts at zero
     if ((allVoiceData[Ivoice].noteNum == allKeybedData[Ivoice].noteNum) && (allKeybedData[Ivoice].isNewVelocity == false)) {
       isNoteChanging = false;
     } else {
@@ -427,7 +470,7 @@ void allocateVoiceForPoly(keybed_t *keybed)
 
     Ikey = Ivoice; //this is the key assumption for this function
     //assignKeyPressToVoice(keybedData,Ikey,Ivoice);
-    assignKeyPressToVoice(allKeybedData, Ikey, Ivoice);
+    assignKeyPressToVoice(allKeybedData, Ikey, Ivoice);  //Ivoice starts at zero
 
     //    if (allVoiceData[Ivoice].forceRetrigger == true) {
     //      //set the attack detune factor based on the velocity
@@ -549,7 +592,7 @@ void allocateVoiceForChordMem(keybed_t *keybed)
 //print out the current voice state
 void printVoiceState(void)
 {
-  Serial.print("Voices    : ");
+  Serial.print(F("Voices    : "));
   for (int i = 0; i < N_POLY; i++) {
     Serial.print(i);
     Serial.print("=");
@@ -584,7 +627,37 @@ void assignKeyPressToVoice(keyPressData_t *keybedData, int const &I_key, int con
   //}
 }
 
+// Find the newest voice that is active
+// return voice index starting from zero
+// If no active voice is found, return -1
+int getNewestActiveVoiceInd(void) {
+  int newestVoiceInd = -1;  //this means that none are active
+  millis_t newest_start_millis = 0;
+  for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
+    if (allVoiceData[I_voice].noteGate) {
+      if (allVoiceData[I_voice].start_millis > newest_start_millis) {
+        newestVoiceInd = I_voice;
+        newest_start_millis = allVoiceData[I_voice].start_millis;
+      }
+    }
+  }
+  return newestVoiceInd;
+}
 
+//returns note number of given voice, including offset due to synth's octave knob setting
+int getCurrentNoteOfVoice(int I_voice)
+{
+  int noteNum = 0;
+  if (I_voice < N_POLY) {
+    noteNum = allVoiceData[I_voice].noteNum;
+    if (assignerState.octave == OCTAVE_8FT) {
+      noteNum += 12;
+    } else if (assignerState.octave == OCTAVE_4FT) {
+      noteNum += 24;
+    }
+  }
+  return noteNum;
+}
 
 //int32_t getAttackDetune(const int &voiceInd)
 //{

@@ -4,6 +4,7 @@
  Author: Chip Audette
  First Created: Feb-Apr 2013
  Extended:  Oct 2015, Velocity Processing
+ Extended:  Nov 2018, Voice Pitch Tuning
  
  Goal: Replace the functions performed by the 8049-217 microprocessor
  used by the Korg Polysix synthesizer.  This microprocessor is the
@@ -65,19 +66,21 @@ volatile boolean arp_period_changed = false;
 int aftertouch_val = 0;
 int porta_setting_index = 0;
 int porta_time_const[] = {2,6,18}; //one time constant, in units of voice cycles (9*676usec)
-//long porta_minstep[] = {9000L,8000L,6000L};  //7000 is good with 4, 9000 is good with 3
-long porta_minstep[] = {300L,300L,300L};  //7000 is good with 4, 9000 is good with 3
+//long porta_minstep[] = {9000L,8000L,6000L};
+long porta_minstep[] = {300L,300L,300L}; 
 int aftertouch_scale[] = {0,5,15};
 int aftertouch_setting_index=1;
 int32_t porta_noteBend_x16bits = 0;
 int32_t LFO_noteBend_x16bits = 0;
 int LFO_type = LFO_TRIANGLE;
-int32_t detune_noteBend_x16bits = 3500L;
+int32_t detune_noteBend_x16bits = 3500L;  //basic unit of detuning...combines with detune factors below
 int defaultDetuneFactors[] = {0,-1,0,1,-2,2};
 //int unisonDetuneFactors[] = {-1,-2,+2,-2,+2,1};
 //int unisonDetuneFactors[] = {0,-1,0,-2,+1,-2};
 int unisonDetuneFactors[] = {0,1,-1,2,-2,0}; //pre 2013-06-12
 int unisonPolyDetuneFactors[] = {-1,-1,-1,1,1,1};
+int32_t perVoiceTuningFactors_x16bits[N_POLY][N_OCTAVES_TUNING];
+int32_t tuningAdjustmentFactor_x16bits = 1000L; //10,000 is about 20cents, so 1000 is about 2 cents
 Adafruit_MCP4725 dac;
 int32_t detune_decay_x16bits = 3500L;
 
@@ -86,23 +89,21 @@ int32_t detune_decay_x16bits = 3500L;
 byte aftertouch_lookup[128] = {0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 50, 52, 55, 57, 59, 61, 63, 65, 67, 70, 72, 74, 76, 78, 80, 83, 85, 87, 89, 91, 93, 95, 98, 100, 102, 104, 106, 108, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127};
 
 //define timing parameters
-//#define VOICE_DURATION_USEC (676)
 long voiceDuration_usec = 676; //standard is 676, human debugging is 250000
 
 //define the timer callback function
-void timer3_callback()
-{
-  newTimedAction = true;
-}
+void timer3_callback() { newTimedAction = true; }
+
 
 void switchStateManager::printUpdateVals(const int &state, const int &debounceCounter)
 {
-  Serial.print("updateState: state ");
+  Serial.print(F("updateState: state "));
   Serial.print(state);
 //  Serial.print(", curState ");
 //  Serial.print(curState);
-  Serial.print(", debounce ");
+  Serial.print(F(", debounce "));
   Serial.println(debounceCounter);
+  return;
 }
 
 void setup() {
@@ -146,8 +147,11 @@ void loop(void) {
   //count++;
   //if (count % 10000 == 1) Serial.println("in main loop...");
   if (newTimedAction) {        //newTimedAction is set to true at fixed intervals via Timer3Callback
-    serviceNextVoicePeriod();
+    
+    // this is where all the voice servicing happens.  This is a lot of work!
+    serviceNextVoicePeriod();   //see voiceServicing.h
     newTimedAction = false;
+    
 //    if ((millis() > 5000) & (firstPrint)) {
 //      check_mem();
 //      Serial.print("Memory: Heap = ");
@@ -158,9 +162,69 @@ void loop(void) {
 //    }
   
   } else {
-    serviceSerial();
+    //this is where incoming MIDI notes are processed.  This is also a lot of work!
+    serviceSerial3();  //see serialMIDIProcessing.h
+
+    //service USB Serial
+    serviceSerial();  // see definition later in this file
   }
   
+}
+
+// print menu of options to USB serial
+void printHelpMenu(void) {
+  Serial.println(F("PolySixKeyAssigner: USB Serial Menu Options:"));
+  Serial.println(F("    : ?:   Print this help menu."));
+  Serial.println(F("    : p/P: Lower/Raise pitch of this voice"));
+}
+
+// service the USB serial link
+void serviceSerial(void) {
+  if(Serial.available() > 0)
+  {
+    //read the byte
+    char byte1 = Serial.read();
+    
+    //interpret the received byte
+    switch (byte1)
+    {
+      case '?':
+        printHelpMenu(); break;
+      case 'p':
+        //lower pitch of this voice
+        //Serial.print(F("Adjusted Pitch.  Adjustment is now: ")); 
+        //Serial.println(adjustTuningThisVoice(-1,true));
+        adjustTuningThisVoice(-1,true);
+        break;
+      case 'P':
+        //raise pitch this voice
+        //Serial.print(F("Adjusted Pitch.  Adjustment is now: ")); 
+        //Serial.println(adjustTuningThisVoice(+1,true));
+        adjustTuningThisVoice(1,true);
+        break;
+    }
+  }
+  return;
+}
+
+int32_t adjustTuningThisVoice(int adjustmentFactor,bool printDebug) {
+  int curVoiceInd = getNewestActiveVoiceInd(); //counts voices starting from zero
+  if (curVoiceInd < 0) { return 0; }
+  int curNote = getCurrentNoteOfVoice(curVoiceInd);
+  int curOctaveInd = min(max(0,curNote/12),N_OCTAVES_TUNING-1);
+  
+  perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd] += \
+    ((int32_t)adjustmentFactor)*tuningAdjustmentFactor_x16bits;
+
+  if (printDebug) {
+    Serial.print(F("adjustTuningThisVoice: voice = ")); Serial.print(curVoiceInd);
+    Serial.print(F(", note = ")); Serial.print(curNote);
+    Serial.print(F(", octave ind = ")); Serial.print(curOctaveInd);
+    Serial.println();
+    Serial.print(F("adjustTuningThisVoice: new tuning factor = "));Serial.println(perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd]);
+  }
+  
+  return perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd];
 }
 
 ////adjust the duration of the voice timer
@@ -190,3 +254,4 @@ void measureInterruptTiming(void)
   ARP_period_micros = cur_micros - prev_ARP_tic_micros;
   prev_ARP_tic_micros = cur_micros;
 }
+

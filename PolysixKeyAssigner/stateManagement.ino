@@ -292,45 +292,45 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
     
     //de-activate the previous state
     if (prevState == STATE_UNISON) {
-      Serial.println("updatePolyUnisonChordState: Disabling Unison");
+      Serial.println(F("updatePolyUnisonChordState: Disabling Unison"));
       deactivateUnison();
     } else if (prevState == STATE_CHORD) {
-      Serial.println("updatePolyUnisonChordState: Disabling Chord Mem");
+      Serial.println(F("updatePolyUnisonChordState: Disabling Chord Mem"));
       deactivateChordMemory();
     } else if (prevState == STATE_UNISON_POLY) {
-      Serial.println("updatePolyUnisonChordState: Disabling Unison Poly");
+      Serial.println(F("updatePolyUnisonChordState: Disabling Unison Poly"));
       deactivateUnisonPoly();
     } else if (prevState == STATE_CHORD_POLY) {
-      Serial.println("updatePolyUnisonChordState: Disabling Chord Poly");
+      Serial.println(F("updatePolyUnisonChordState: Disabling Chord Poly"));
       deactivateChordPoly();
     }
   
     //activate the new state
     switch (newState) {
       case STATE_POLY:
-        Serial.println("updatePolyUnisonChordState: activate Poly mode.");
+        Serial.println(F("updatePolyUnisonChordState: activate Poly mode."));
         activatePoly(stateChanged);
         //if (newState != prevState) cur_but_state.poly.user_beenReleased = false;  //because button was just pressed
         //if (stateChanged) cur_but_state.poly.user_beenReleased = false;  //because button was just pressed
         break;
       case STATE_UNISON:
-        Serial.println("updatePolyUnisonChordState: activate Unison mode.");
+        Serial.println(F("updatePolyUnisonChordState: activate Unison mode."));
         activateUnison(stateChanged);
         //if (newState != prevState) cur_but_state.unison.user_beenReleased = false;//because button was just pressed
         //if (stateChanged) cur_but_state.unison.user_beenReleased = false;//because button was just pressed
         break;
       case STATE_CHORD:     
-        Serial.println("updatePolyUnisonChordState: activate Chord_Mem mode.");
+        Serial.println(F("updatePolyUnisonChordState: activate Chord_Mem mode."));
         activateChordMemory(stateChanged);
         //if (newState != prevState) cur_but_state.chord_mem.user_beenReleased = false;//because button was just pressed
         //if (stateChanged) cur_but_state.chord_mem.user_beenReleased = false;//because button was just pressed
         break;
       case STATE_UNISON_POLY:
-        Serial.println("updatePolyUnisonChordState: activate UnisonPoly mode.");
+        Serial.println(F("updatePolyUnisonChordState: activate UnisonPoly mode."));
         activateUnisonPoly(stateChanged);
         break;
       case STATE_CHORD_POLY:
-        Serial.println("updatePolyUnisonChordState: activate ChordPoly mode.");
+        Serial.println(F("updatePolyUnisonChordState: activate ChordPoly mode."));
         activateChordPoly(stateChanged);
         break;
     }
@@ -366,7 +366,7 @@ void updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state)
       //let's try to run the arpeggiator
       if (assignerState.arp == ON) {
         //start arpeggiator
-        Serial.println("updateArpOnOffState: Arp On");
+        Serial.println(F("updateArpOnOffState: Arp On"));
         int mode = ARP_SORTMODE_NOTENUM;
         if (assignerState.hold == ON) {
           mode = ARP_SORTMODE_STARTTIME;
@@ -377,7 +377,7 @@ void updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state)
 
       } else {
         //stop arpeggiator
-        Serial.println("updateArpOnOffState: Arp Off");
+        Serial.println(F("updateArpOnOffState: Arp Off"));
         arpManager.stopArp();
       }
     } else if (assignerState.keypanel_mode == KEYPANEL_MODE_OTHER) {
@@ -602,7 +602,7 @@ void deactivateHoldState(void) {
 //update the hold state from MIDI...basically just off and on
 void updateHoldStateMIDI(int const &desired_hold_state) {
   if (DEBUG_TO_SERIAL & DEBUG_THIS_FILE) {
-    Serial.print("stateManagement: updateHoldStateMIDI, desired_hold state = ");
+    Serial.print(F("stateManagement: updateHoldStateMIDI, desired_hold state = "));
     Serial.println(desired_hold_state);
   }
   if (desired_hold_state==ON) {
@@ -719,7 +719,7 @@ void activateChordMemory(boolean const &stateChanged)
   //if arp is off, lock in the currently pressed notes for the chord
   if (assignerState.arp == OFF) {
     if (stateChanged) {
-      Serial.println("activaeChordMemory: stateChanged is true.");
+      Serial.println(F("activaeChordMemory: stateChanged is true."));
       //lock in chord voicing of all pressed or held notes
       setChordMemState();
     }
@@ -760,7 +760,7 @@ void activateChordPoly(boolean const &stateChanged)
   assignerState.chord_mem = ON;
 
   if (stateChanged==true) {
-    Serial.println("activateChordPoly: stateChanged is true.");
+    Serial.println(F("activateChordPoly: stateChanged is true."));
     assignerState.legato = OFF;
   }
 
@@ -822,13 +822,13 @@ void setChordMemState(void)
   keyPress->end_millis = keyPress->start_millis;
 
   if (DEBUG_TO_SERIAL & DEBUG_THIS_FILE) {
-    Serial.print("setChordMemState: Shift: ");
+    Serial.print(F("setChordMemState: Shift: "));
     for (int i=0;i<N_POLY;i++) {
       Serial.print(chordMemState.noteShift[i]);
       Serial.print(" ");
       delayMicroseconds(20);
     }
-    Serial.print("isActive: ");
+    Serial.print(F("isActive: "));
     for (int i=0;i<N_POLY;i++) {
       Serial.print(chordMemState.isNoteActive[i]);
       Serial.print(" ");
@@ -893,7 +893,7 @@ void setDetuneFactorsForChordMemory(void) {
       }
     } else {
       //all other configuration of notes
-      Serial.println("stateManagement: setDetuneFactorsForChordMemory: detune method 3");
+      Serial.println(F("stateManagement: setDetuneFactorsForChordMemory: detune method 3"));
       nActive=0;
       for (int i=0; i<N_POLY; i++) {
         if (i == chordMemState.voiceIndexOfBase) {
@@ -916,9 +916,9 @@ void setDetuneFactorsForChordMemory(void) {
   }
   
   for (int i = 0; i < N_POLY; i++) {
-    Serial.print("stateManagement: setDetuneFactorsForChordMemory: voice ");
+    Serial.print(F("stateManagement: setDetuneFactorsForChordMemory: voice "));
     Serial.print(i);
-    Serial.print(" : detune = ");
+    Serial.print(F(" : detune = "));
     Serial.println(chordMemState.detuneFactor[i]); 
   }
 }
