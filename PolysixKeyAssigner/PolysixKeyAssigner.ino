@@ -50,6 +50,7 @@ void check_mem() {
 #include "TimerFour.h"  //this is a 16-bit timer on the MEGA
 #include <Wire.h>
 #include <Adafruit_MCP4725.h>
+#include <EEPROM.h> //for storing the tuning factors
 
 //define our global variables
 keybed_t trueKeybed;  //this represents the keys pressed on the actual keybed
@@ -122,6 +123,7 @@ void setup() {
   assignerState.init();
   initChordMemState();
   initializeVoiceData(allVoiceData,N_POLY);
+  readEEPROM();
   
   //start the DAC
   dac.begin(0x62);
@@ -171,11 +173,73 @@ void loop(void) {
   
 }
 
+
+//read all variables from the EEPROM
+void readEEPROM(void) {
+  int eeAddress = 0; //EEPROM address to start reading from
+
+  //load tuning data
+  int32_t foo;
+  for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
+    for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
+      EEPROM.get(eeAddress, foo);
+      perVoiceTuningFactors_x16bits[I_voice][Ioct] = foo;
+      eeAddress += sizeof(foo);
+    }
+  }
+  return;
+};
+
+
+//save all variables to the EPPROM
+void saveEEPROM(void) {
+  int eeAddress = 0; //EEPROM address to start reading from
+
+  //save the tuning data
+  int32_t foo;
+  for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
+    for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
+      foo=perVoiceTuningFactors_x16bits[I_voice][Ioct];
+      EEPROM.put(eeAddress, foo);
+      eeAddress += sizeof(foo);
+    }
+  }
+  
+  //Serial.println("saveEEPROM: complete.");
+  return;
+}
+
+
+void printTuningFactors(void) {
+  Serial.println("printTuningFactors(): Tuning factors...");
+  for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
+      Serial.print("  : V"); Serial.print(I_voice); Serial.print(": ");
+      for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
+        Serial.print(perVoiceTuningFactors_x16bits[I_voice][Ioct]); 
+        Serial.print(", ");
+      }
+      Serial.println();
+  } 
+  return;
+}
+
+
+void clearTuningFactors(void) {
+  for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
+      for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
+        perVoiceTuningFactors_x16bits[I_voice][Ioct] = 0;
+      }
+  } 
+  return;
+}
+
 // print menu of options to USB serial
 void printHelpMenu(void) {
   Serial.println(F("PolySixKeyAssigner: USB Serial Menu Options:"));
   Serial.println(F("    : ?:   Print this help menu."));
-  Serial.println(F("    : p/P: Lower/Raise pitch of this voice"));
+  Serial.println(F("    : `/~: Read/Save EEPROM"));
+  Serial.println(F("    : t/T: Print/Clear all tuning factors in RAM"));
+  Serial.println(F("    : p/P: Lower/Raise tuning factor of this octave of this voice"));
 }
 
 // service the USB serial link
@@ -190,6 +254,20 @@ void serviceSerial(void) {
     {
       case '?':
         printHelpMenu(); break;
+      case '~':
+        saveEEPROM(); 
+        Serial.println(F("serviceSerial: saveEEPROM complete."));
+        break;
+      case '`':
+        readEEPROM();
+        Serial.println(F("serviceSerial: readEEPROM complete."));
+        break;
+      case 't':
+        printTuningFactors(); break;
+      case 'T':
+        clearTuningFactors();
+        Serial.println(F("serviceSerial: clearTuningFactors() complete."));
+        break;
       case 'p':
         //lower pitch of this voice
         //Serial.print(F("Adjusted Pitch.  Adjustment is now: ")); 
