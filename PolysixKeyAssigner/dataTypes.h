@@ -37,6 +37,7 @@
 #define RELEASE_VELOCITY_FROM_HOLD (96)  //could be zero to 127
 #define KEYPANEL_MODE_ARP (1)
 #define KEYPANEL_MODE_OTHER (2)
+#define KEYPANEL_MODE_TUNING (3)
 
 #define STATE_DEFAULT (-1)
 #define STATE_POLY (10)
@@ -62,7 +63,7 @@
 #define DAC_COUNTS_PER_NOTE_x8bits (8736)  //12-bit divided by 10 octaves with 12 notes per octave...all assuming 5V full scale and 0.5V/octave scaling
 //define DAC_COUNTS_PER_NOTE_x8bits (8806)  //12-bit divided by 10 octaves with 12 notes per octave...all assuming 4.960V full scale and 0.5V/octave scaling
 #define FULL_SCALE_INT16 (32768)
-#define N_OCTAVES_TUNING (5)  //how many entries will be in the tuning table
+#define N_OCTAVES_TUNING (6)  //how many entries will be in the tuning table
   
 typedef unsigned long millis_t;
 typedef unsigned long micros_t;
@@ -132,6 +133,16 @@ typedef struct {
   int arp_direction;
   int arp_range;
 } arp_parameters_t;
+
+#define TUNING_MODE_ALL_VOICES (0)
+#define TUNING_MODE_ALL_OCT_OF_ONE_VOICE (1)
+#define TUNING_MODE_ONE_OCT_OF_ONE_VOICE (2)
+class tuningModeState_t {
+  public:
+    tuningModeState_t(void) {}
+    int voiceCommanded = 0;  //zero to N_POLY
+    int adjustmentMode = TUNING_MODE_ALL_VOICES;
+};
 
 class assignerState_t {
   public:

@@ -217,22 +217,31 @@ byte getPitchByte(const int &voiceInd)
 int countCalls[N_VOICE_SLOTS];
 int32_t getTuningCorrection(int voiceInd, int noteNum) { //voiceInd is referenced to zero, not one
   int foo_lowOctIndex = min(N_OCTAVES_TUNING-1,max(0,noteNum / 12));
-  int foo_highOctIndex = min(N_OCTAVES_TUNING,foo_lowOctIndex+1);
-  int32_t tuneFactorLow_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex];
-  int32_t tuneFactorHigh_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex];
+  int foo_highOctIndex = min(N_OCTAVES_TUNING-1,foo_lowOctIndex+1);
+  int noteRelLowOct = noteNum - foo_lowOctIndex*12;
+  
+  int32_t tuneFactorLow_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex][0]; //start of the octave  
+  int32_t tuneFactorHigh_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex][1]; //end of the octave
+  int32_t spanOfNotes = 11;  //11 half-steps span the low and high factors computed above. 
+  
+  //int32_t tuneFactorHigh_x16bits = perVoiceTuningFactors_x16bits[voiceInd][foo_lowOctIndex][0];  //start of next octave
+  //int32_t spanOfNotes = 12;  //12 half-steps (one octave) span the low and high factors computed above.
+   
+  if (foo_lowOctIndex >= (N_OCTAVES_TUNING-1)) {
+    //no interpolation needed...just use the high tuning value
+    tuneFactorLow_x16bits = perVoiceTuningFactors_x16bits[voiceInd][N_OCTAVES_TUNING-1][0];
+    tuneFactorHigh_x16bits = perVoiceTuningFactors_x16bits[voiceInd][N_OCTAVES_TUNING-1][0];
+  }
 
   //choose the tuning factor
   int32_t tuningCorrection_x16bits = 0; 
-  if (noteNum <= foo_lowOctIndex*12) {
+  if (noteNum <= 0) {
       //at or below the bottom of the range, so just use the low value
       tuningCorrection_x16bits = tuneFactorLow_x16bits; 
-  } else if (noteNum >= foo_highOctIndex*12) {
-      //at or above the top of the range, so just use the high value
-      tuningCorrection_x16bits = tuneFactorHigh_x16bits; 
   } else {
       //we're within the working range, so interpolate
       tuningCorrection_x16bits = tuneFactorLow_x16bits + \
-       (((tuneFactorHigh_x16bits - tuneFactorLow_x16bits) * (noteNum - (foo_lowOctIndex*12))) / 12);
+       (((tuneFactorHigh_x16bits - tuneFactorLow_x16bits) * noteRelLowOct) / spanOfNotes);
   }
 
   #if 0

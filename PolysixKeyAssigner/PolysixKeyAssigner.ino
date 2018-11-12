@@ -60,6 +60,7 @@ assignerState_t assignerState;
 arpManager_t arpManager(&trueKeybed,&arpGeneratedKeybed);
 assignerButtonState2_t assignerButtonState;
 chordMemState_t chordMemState;
+tuningModeState_t tuningModeState;
 volatile boolean newTimedAction = false; //used for basic voice timing
 volatile micros_t prev_ARP_tic_micros = 0L;
 volatile micros_t ARP_period_micros = 1000000L;
@@ -80,7 +81,7 @@ int defaultDetuneFactors[] = {0,-1,0,1,-2,2};
 //int unisonDetuneFactors[] = {0,-1,0,-2,+1,-2};
 int unisonDetuneFactors[] = {0,1,-1,2,-2,0}; //pre 2013-06-12
 int unisonPolyDetuneFactors[] = {-1,-1,-1,1,1,1};
-int32_t perVoiceTuningFactors_x16bits[N_POLY][N_OCTAVES_TUNING];
+int32_t perVoiceTuningFactors_x16bits[N_POLY][N_OCTAVES_TUNING][1];
 int32_t tuningAdjustmentFactor_x16bits = 1000L; //10,000 is about 20cents, so 1000 is about 2 cents
 Adafruit_MCP4725 dac;
 int32_t detune_decay_x16bits = 3500L;
@@ -182,8 +183,9 @@ void readEEPROM(void) {
   int32_t foo;
   for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
     for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
+      //for (int Istartend = 0; Istartend < 2; Istartend++) {
       EEPROM.get(eeAddress, foo);
-      perVoiceTuningFactors_x16bits[I_voice][Ioct] = foo;
+      perVoiceTuningFactors_x16bits[I_voice][Ioct][0] = foo;
       eeAddress += sizeof(foo);
     }
   }
@@ -199,9 +201,11 @@ void saveEEPROM(void) {
   int32_t foo;
   for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
     for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
-      foo=perVoiceTuningFactors_x16bits[I_voice][Ioct];
-      EEPROM.put(eeAddress, foo);
-      eeAddress += sizeof(foo);
+      for (int Istartend = 0; Istartend < 2; Istartend++) {
+        foo=perVoiceTuningFactors_x16bits[I_voice][Ioct][Istartend];
+        EEPROM.put(eeAddress, foo);
+        eeAddress += sizeof(foo);
+      }
     }
   }
   
@@ -215,8 +219,11 @@ void printTuningFactors(void) {
   for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
       Serial.print("  : V"); Serial.print(I_voice); Serial.print(": ");
       for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
-        Serial.print(perVoiceTuningFactors_x16bits[I_voice][Ioct]); 
+        Serial.print("[");
+        Serial.print(perVoiceTuningFactors_x16bits[I_voice][Ioct][0]); 
         Serial.print(", ");
+        Serial.print(perVoiceTuningFactors_x16bits[I_voice][Ioct][1]); 
+        Serial.print("], ");
       }
       Serial.println();
   } 
@@ -227,7 +234,8 @@ void printTuningFactors(void) {
 void clearTuningFactors(void) {
   for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
       for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
-        perVoiceTuningFactors_x16bits[I_voice][Ioct] = 0;
+        perVoiceTuningFactors_x16bits[I_voice][Ioct][0] = 0;
+        perVoiceTuningFactors_x16bits[I_voice][Ioct][1] = 0;
       }
   } 
   return;
@@ -290,19 +298,30 @@ int32_t adjustTuningThisVoice(int adjustmentFactor,bool printDebug) {
   if (curVoiceInd < 0) { return 0; }
   int curNote = getCurrentNoteOfVoice(curVoiceInd);
   int curOctaveInd = min(max(0,curNote/12),N_OCTAVES_TUNING-1);
-  
-  perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd] += \
-    ((int32_t)adjustmentFactor)*tuningAdjustmentFactor_x16bits;
+  int Istartend = 0;
+  int noteRelCurOct = curNote - curOctaveInd*12;
+  if (noteRelCurOct == 11) Istartend = 1;
+
+  if (tuningModeState.adjustmentMode == TUNING_MODE_ALL_VOICES) {
+    for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
+        perVoiceTuningFactors_x16bits[I_voice][curOctaveInd][Istartend] += \
+          ((int32_t)adjustmentFactor)*tuningAdjustmentFactor_x16bits;
+    }
+  } else {
+     perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd][Istartend] += \
+        ((int32_t)adjustmentFactor)*tuningAdjustmentFactor_x16bits;
+  }
 
   if (printDebug) {
     Serial.print(F("adjustTuningThisVoice: voice = ")); Serial.print(curVoiceInd);
     Serial.print(F(", note = ")); Serial.print(curNote);
     Serial.print(F(", octave ind = ")); Serial.print(curOctaveInd);
+    Serial.print(F(", Istartend  = ")); Serial.print(Istartend);
     Serial.println();
-    Serial.print(F("adjustTuningThisVoice: new tuning factor = "));Serial.println(perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd]);
+    Serial.print(F("adjustTuningThisVoice: new tuning factor = "));Serial.println(perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd][Istartend]);
   }
   
-  return perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd];
+  return perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd][Istartend];
 }
 
 ////adjust the duration of the voice timer

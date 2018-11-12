@@ -39,213 +39,216 @@ void updateKeyAssignerStateFromButtons(assignerButtonState2_t &cur_but_state)
 {
   static micros_t prev_knob_value = 0L;
   static int diff_knob_thresh = 100;
-  int update_now = true;
   int prePedal_porta_state = OFF;
   int prePedal_porta_setting_index = 0;
 
   //update the keypanel mode...interpret as arp mode or as standard/other mode?
   updateKeyPanelMode(cur_but_state);
 
-  //update arpeggiator on/off status
-  updateArpOnOffAndParameters(cur_but_state);  
-
-  //update the poly/unison/chord state
-  updatePolyUnisonChordState(cur_but_state);
-
-  //update the hold state
-  updateHoldState(cur_but_state);
-
-  //listen to all the switches, if not in ARP mode
-  if (assignerState.keypanel_mode == KEYPANEL_MODE_OTHER) {
-    //if arp is off, just take the current switchs' states.  If arp is on, look for changes in switchs' states
-    update_now = true;
-    if (assignerState.arp == ON) {
-      update_now = false;
-      if (cur_but_state.arp_dir.didStateChange() == true) {
-        update_now = true;
-      }
+  if (assignerState.keypanel_mode == KEYPANEL_MODE_TUNING) {
+    interpretButtonsAndSwitches_KEYPANEL_TUNING(cur_but_state);  
+  } else {
+    //interpret the buttons and switches for the other modes
+    
+    //update arpeggiator on/off status
+    updateArpOnOffAndParameters(cur_but_state);  
+  
+    //update the poly/unison/chord state
+    updatePolyUnisonChordState(cur_but_state);
+  
+    //update the hold state
+    updateHoldState(cur_but_state);
+  
+    //if not in ARP mode, listen to all the switches (not the buttons, the switches)
+    if (assignerState.keypanel_mode == KEYPANEL_MODE_OTHER) {
+      interpretSwitches_KEYPANEL_OTHER(cur_but_state);
     }
-    if (update_now == true) {
-      switch (cur_but_state.arp_dir.state) { //temporary way to control the portamento
-      case ARP_DIR_UP:
-        porta_setting_index = 0;
-        break;
-      case ARP_DIR_DOWN:
-        porta_setting_index = 1;
-        break;
-      case ARP_DIR_UPDOWN:
-        porta_setting_index = 2;  
-        break;
-      default:
-        porta_setting_index = 1;
+    
+    //update the portamento from the pedal
+    if (cur_but_state.portamentoPedal.state == ON) {
+      prePedal_porta_state = assignerState.portamento;
+      prePedal_porta_setting_index = porta_setting_index;
+      porta_setting_index = 2;
+      assignerState.portamento = ON;
+  
+      //do labor for looking at the ARP speed knob as a method for controlling the amount of portamento
+      if (cur_but_state.portamentoPedal.didStateChange() == true) prev_knob_value = ARP_period_micros;
+      if ((ARP_period_micros - prev_knob_value) > diff_knob_thresh) {
+        prev_knob_value = ARP_period_micros;
+        setNewPortamentoValue(prev_knob_value,porta_setting_index);
       }
+    } else if (cur_but_state.portamentoPedal.wasJustReleased() == true) {
+      porta_setting_index = prePedal_porta_setting_index;
+      assignerState.portamento = prePedal_porta_state;
+    }
+  }
+}
+
+void interpretButtonsAndSwitches_KEYPANEL_TUNING(assignerButtonState2_t &cur_but_state)
+{   
+    //Interpret switch determining how much is getting tuned
+    switch (cur_but_state.arp_range.state) {
+      case (ARP_RANGE_FULL):
+        tuningModeState.adjustmentMode = TUNING_MODE_ALL_VOICES;
+        break;
+      case (ARP_RANGE_2OCT):
+        tuningModeState.adjustmentMode = TUNING_MODE_ALL_OCT_OF_ONE_VOICE;
+        break;
+      case (ARP_RANGE_1OCT):
+        tuningModeState.adjustmentMode = TUNING_MODE_ONE_OCT_OF_ONE_VOICE;
+        break;
     }
 
-    //turn portamento on or off.
-    update_now = true;
-    if (assignerState.arp == ON) {
-      update_now = false;
-      if (cur_but_state.arp_latch.didStateChange() == true) {
-        update_now = true;
-      }
-    }
-    if (update_now == true) assignerState.portamento = cur_but_state.arp_latch.state; //temporary way to control the portamento
-
-    //now update the aftertouch settings
-    //if arp is off, just take the current switch buttons.  If arp is on, look for changes
-    update_now = true;
-    if (assignerState.arp == ON) {
-      update_now = false;
-      if (cur_but_state.arp_range.didStateChange() == true) {
-        update_now = true;
-      }
-    }
-    if (update_now == true) {
-      switch (assignerButtonState.arp_range.state) { //temporary way to control the aftertouch
-      case ARP_RANGE_FULL:
-        aftertouch_setting_index = 0;
+    //Interpret switches determining which voice to be tuned
+    switch (cur_but_state.arp_dir.state) {
+      case (ARP_DIR_UP):
+        if (cur_but_state.arp_latch.state == ON) {
+          tuningModeState.voiceCommanded = 0;
+        } else {
+          tuningModeState.voiceCommanded = 3;
+        }
         break;
-      case ARP_RANGE_2OCT:
-        aftertouch_setting_index = 1;
-        break; 
-      case ARP_RANGE_1OCT:
-        aftertouch_setting_index = 2;
-        break;  
-      default:
-        porta_setting_index = 1;
-      }
+      case (ARP_DIR_DOWN):
+        if (cur_but_state.arp_latch.state == ON) {
+          tuningModeState.voiceCommanded = 0+1;
+        } else {
+          tuningModeState.voiceCommanded = 3+1;
+        }
+        break;
+      case (ARP_DIR_UPDOWN):
+        if (cur_but_state.arp_latch.state == ON) {
+          tuningModeState.voiceCommanded = 0+2;
+        } else {
+          tuningModeState.voiceCommanded = 3+2;
+        }
+        break;
+    } 
+
+    //interpret buttons to determine how much tuning to do
+    bool printDebug = true;
+    if (cur_but_state.hold.wasJustReleased()==true) {
+       adjustTuningThisVoice(-5,printDebug);
+    }
+    if (cur_but_state.chord_mem.wasJustReleased()==true) {
+      adjustTuningThisVoice(-1,printDebug);
+    }
+    if (cur_but_state.unison.wasJustReleased()==true) {
+      adjustTuningThisVoice(+1,printDebug);
+    }
+    if (cur_but_state.poly.wasJustReleased()==true) {
+      adjustTuningThisVoice(+5,printDebug);
+    }
+}
+
+void interpretSwitches_KEYPANEL_OTHER(assignerButtonState2_t &cur_but_state)
+{
+  //if arp is off, just take the current switch's states.  If arp is on, look for changes in switchs' states
+  int update_now = true;
+  if (assignerState.arp == ON) {
+    update_now = false;
+    if (cur_but_state.arp_dir.didStateChange() == true) {
+      update_now = true;
+    }
+  }
+  if (update_now == true) {
+    switch (cur_but_state.arp_dir.state) { //temporary way to control the portamento
+    case ARP_DIR_UP:
+      porta_setting_index = 0;
+      break;
+    case ARP_DIR_DOWN:
+      porta_setting_index = 1;
+      break;
+    case ARP_DIR_UPDOWN:
+      porta_setting_index = 2;  
+      break;
+    default:
+      porta_setting_index = 1;
     }
   }
   
-  //update the portamento from the pedal
-  if (cur_but_state.portamentoPedal.state == ON) {
-    prePedal_porta_state = assignerState.portamento;
-    prePedal_porta_setting_index = porta_setting_index;
-    porta_setting_index = 2;
-    assignerState.portamento = ON;
-
-    //do labor for looking at the ARP speed knob as a method for controlling the amount of portamento
-    if (cur_but_state.portamentoPedal.didStateChange() == true) prev_knob_value = ARP_period_micros;
-    if ((ARP_period_micros - prev_knob_value) > diff_knob_thresh) {
-      prev_knob_value = ARP_period_micros;
-      setNewPortamentoValue(prev_knob_value,porta_setting_index);
+  //turn portamento on or off.
+  update_now = true;
+  if (assignerState.arp == ON) {
+    update_now = false;
+    if (cur_but_state.arp_latch.didStateChange() == true) {
+      update_now = true;
     }
-  } else if (cur_but_state.portamentoPedal.wasJustReleased() == true) {
-    porta_setting_index = prePedal_porta_setting_index;
-    assignerState.portamento = prePedal_porta_state;
   }
+  if (update_now == true) assignerState.portamento = cur_but_state.arp_latch.state; //temporary way to control the portamento
+  
+  //now update the aftertouch settings
+  //if arp is off, just take the current switch buttons.  If arp is on, look for changes
+  update_now = true;
+  if (assignerState.arp == ON) {
+    update_now = false;
+    if (cur_but_state.arp_range.didStateChange() == true) {
+      update_now = true;
+    }
+  }
+  if (update_now == true) {
+    switch (assignerButtonState.arp_range.state) { //temporary way to control the aftertouch
+    case ARP_RANGE_FULL:
+      aftertouch_setting_index = 0;
+      break;
+    case ARP_RANGE_2OCT:
+      aftertouch_setting_index = 1;
+      break; 
+    case ARP_RANGE_1OCT:
+      aftertouch_setting_index = 2;
+      break;  
+    default:
+      porta_setting_index = 1; //??  This probably never gets called, but isn't it wrong?  should it be aftertouch_setting_index = 0;
+    }
+  }
+  return;
 }
+
 
 //update the keypanel mode
 void updateKeyPanelMode(assignerButtonState2_t &cur_but_state)
 {
-  if (cur_but_state.fromTapeToggle.state == HIGH) {
-    //has the panel mode state changed?
-    assignerState.keypanel_mode = KEYPANEL_MODE_OTHER;
-  } else {   
-    assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
+  //look first to see if coming out of tuning mode
+  if (assignerState.keypanel_mode == KEYPANEL_MODE_TUNING) {
+    //are we switching out of this mode?
+    if (cur_but_state.fromTapeToggle.state == LOW) {
+      //switch out of tuning mode
+      saveEEPROM();
+      assignerState.keypanel_mode = KEYPANEL_MODE_OTHER;
+      
+      Serial.println(F("stateManagement: updateKeyPanelMode: switching out of tuning mode..."));
+    }
+  } else {
+    //look to see if going into tuning mode
+    if ( (cur_but_state.fromTapeToggle.state == HIGH) && (cur_but_state.fromTapeToggle.didStateChange()) \
+            && (cur_but_state.arp_on.state == ON) ) {
+      switchToTuningMode();
+      assignerState.keypanel_mode = KEYPANEL_MODE_TUNING;
+      Serial.println(F("stateManagement: updateKeyPanelMode: switching to tuning mode..."));
+        
+      //make sure that we don't kick into ARP mode when we let go of the ARP button
+      cur_but_state.arp_on.set_user_beenPressedAgainToFalse(); //this means that the arp on/off won't toggle when you finally release the arp button
+
+    } else if (cur_but_state.fromTapeToggle.state == HIGH) {
+      //has the panel mode state changed?
+      assignerState.keypanel_mode = KEYPANEL_MODE_OTHER;
+    } else {   
+      assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
+    }
   }
 }
 
-////update the arpeggiator state based on the arp button presses and the switches
-//void  updateArpOnOffAndParameters_old(assignerButtonState2_t &cur_but_state) 
-//{
-//  static micros_t prev_knob_value = 0L;
-//  static int diff_knob_thresh = 100;
-//
-//  //only process on release of the button
-//  int cur_but_arp = cur_but_state.arp_on.state;
-//  int but_didChange = cur_but_state.arp_on.didStateChange();
-//  int user_beenReleased = cur_but_state.arp_on.user_beenReleased;
-//  int user_beenPressedAgain = cur_but_state.arp_on.user_beenPressedAgain;
-//
-//  //look for release of a button that didn't have other actions during this press 
-//  //(user_beenPressedAgain would be false if other actions had taken place during this press)
-//  if ((cur_but_state.arp_on.wasJustReleased()==true) & (user_beenPressedAgain == true)) {
-//    if (assignerState.keypanel_mode == KEYPANEL_MODE_ARP) {
-//      //toggle the arp state
-//      assignerState.arp = !assignerState.arp;
-//
-//      //let's try to run the arpeggiator
-//      if (assignerState.arp == ON) {
-//        //start arpeggiator
-//        Serial.println("updateArpOnOffState: Arp On");
-//        int mode = ARP_SORTMODE_NOTENUM;
-//        if (assignerState.hold == ON) {
-//          mode = ARP_SORTMODE_STARTTIME;
-//          arpManager.startArp(mode,assignerState,deactivateHoldState); //tell the arp to deactivate the hold after it updates the notes for the ARP
-//        } else {
-//          arpManager.startArp(mode,assignerState); //the basic start arp command
-//        }
-//
-//      } else {
-//        //stop arpeggiator
-//        Serial.println("updateArpOnOffState: Arp Off");
-//        arpManager.stopArp();
-//      }
-//    } else if (assignerState.keypanel_mode == KEYPANEL_MODE_OTHER) {
-//      //in this mode, we're controlling other functions...like DETUNE
-//      //toggle the detune state
-//      assignerState.detune = !assignerState.detune;   
-//    } 
-//  } 
-//
-//  //look to see if any other state buttons were pressed while ARP is pressed...control panel must be in ARP mode
-//  if (assignerState.keypanel_mode == KEYPANEL_MODE_ARP) {
-//    if (cur_but_state.arp_on.state == ON) {
-//      //check to see if any of the other four assigner state buttons are pressed
-//      int val = -1;
-//      if (cur_but_state.hold.state == ON) val = 31;  //one quarter of 127
-//      if (cur_but_state.chord_mem.state == ON) val = 63;
-//      if (cur_but_state.unison.state == ON) val = 95;
-//      if (cur_but_state.poly.state == ON) val = 127;
-//  
-//      if (val > -1) {
-//        arpManager.setArpGate_x7bits(val);
-//        cur_but_state.arp_on.set_user_beenPressedAgainToFalse(); //this means that the arp on/off won't toggle when you finally release the arp button
-//      }
-//    }
-//  }
-//
-//
-//  //do labor for looking at the ARP speed knob as a method for controlling the amount of portamento
-//  if (assignerState.keypanel_mode == KEYPANEL_MODE_OTHER) {
-//    if (cur_but_arp == true) {
-//      //button is pressed
-//      if (but_didChange == true) {
-//        //and this is the first time through with it pressed
-//        prev_knob_value = ARP_period_micros;
-//      }
-//
-//      //has the speed knob been turned while the button has been pressed?
-//      if ((ARP_period_micros - prev_knob_value) > diff_knob_thresh) {
-//        //knob has been moved
-//        cur_but_state.arp_on.user_beenReleased = false;
-//        cur_but_state.arp_on.set_user_beenPressedAgainToFalse();
-//        prev_knob_value = ARP_period_micros;
-//        if (assignerState.keypanel_mode == KEYPANEL_MODE_OTHER) {
-//          setNewDetuneValue(prev_knob_value);
-//        }
-//      }
-//    }
-//  }
-//
-//  //interpret the ARP parameters from the switches
-//  if (assignerState.keypanel_mode == KEYPANEL_MODE_ARP) {
-//    if (assignerState.arp == ON) {
-//      //if arp is on, just look for changes in state
-//      if (cur_but_state.arp_latch.didStateChange() == true) assignerState.arp_params.arp_latch = cur_but_state.arp_latch.state;
-//      if (cur_but_state.arp_dir.didStateChange() == true) assignerState.arp_params.arp_direction = cur_but_state.arp_dir.state;
-//      if (cur_but_state.arp_range.didStateChange() == true) assignerState.arp_params.arp_range = cur_but_state.arp_range.state;
-//    } else {
-//      //if arp is off, just take the state as shown
-//      assignerState.arp_params.arp_latch = cur_but_state.arp_latch.state;
-//      assignerState.arp_params.arp_direction = cur_but_state.arp_dir.state;
-//      assignerState.arp_params.arp_range = cur_but_state.arp_range.state;
-//    }
-//  }
-//}
+//switch the unit to tuning mode
+void switchToTuningMode(void) {
 
+  //turn off arp (if active)
+  if (assignerState.arp == ON) arpManager.stopArp();
+  
+  //turn off detune
+  assignerState.detune = OFF;
+
+}
+
+  
 //Update the Poly/Unison/Chord state...
 //Note: ignore all button presses if the arp button is pressed.  If the arp button is pressed,
 //It means that we're in some complex arp-button-related command mode
