@@ -183,10 +183,11 @@ void readEEPROM(void) {
   int32_t foo;
   for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
     for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {
-      //for (int Istartend = 0; Istartend < 2; Istartend++) {
-      EEPROM.get(eeAddress, foo);
-      perVoiceTuningFactors_x16bits[I_voice][Ioct][0] = foo;
-      eeAddress += sizeof(foo);
+        for (int Istartend = 0; Istartend < 2; Istartend++) {
+        EEPROM.get(eeAddress, foo);
+        perVoiceTuningFactors_x16bits[I_voice][Ioct][Istartend] = foo;
+        eeAddress += sizeof(foo);
+      }
     }
   }
   return;
@@ -244,7 +245,7 @@ void clearTuningFactors(void) {
 // print menu of options to USB serial
 void printHelpMenu(void) {
   Serial.println(F("PolySixKeyAssigner: USB Serial Menu Options:"));
-  Serial.println(F("    : ?:   Print this help menu."));
+  Serial.println(F("    : h/?: Print this help menu."));
   Serial.println(F("    : `/~: Read/Save EEPROM"));
   Serial.println(F("    : t/T: Print/Clear all tuning factors in RAM"));
   Serial.println(F("    : p/P: Lower/Raise tuning factor of this octave of this voice"));
@@ -262,6 +263,8 @@ void serviceSerial(void) {
     {
       case '?':
         printHelpMenu(); break;
+      case 'h':
+        printHelpMenu(); break;        
       case '~':
         saveEEPROM(); 
         Serial.println(F("serviceSerial: saveEEPROM complete."));
