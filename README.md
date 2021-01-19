@@ -12,3 +12,8 @@ This repository contains code related to my explorations and modifications of my
 **PolysixVelocityProcessor**:  When Combined with the PolysixKeyAssigner, plus a Teensy 3.x, plus some wiring, this code for the Teensy enables velocity-sensitivity to control the intensity of the VCF envelope.  Hit the keys harder and the filter opens up more.  Good for getting dynamics into electric piano sounds.
 
 Finally, anything under "Trials" were simply explorations that didn't lead to permanent mods.  This can probably be ignored completely.
+
+PolySixKeyAssigner
+==================
+
+To get into "Tuning Mode", press and hold the Arp Button, then switch the "From Tape" switch from LOW to HIGH.
