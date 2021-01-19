@@ -90,6 +90,7 @@ void serviceSerial3(void) {
           }
           //turnOnStatLight(STAT2);//turn on STAT2 light indicating that a note is active
           trueKeybed.addKeyPress(noteNum,noteVel);
+          trueKeybed_givenList.addKeyPress(noteNum,noteVel);
           break;
           
         case 0x80:
@@ -97,6 +98,7 @@ void serviceSerial3(void) {
           if (DEBUG_TO_SERIAL) Serial.println(F("Note Off Message Received"));
           //turnOffStatLight(STAT2);//turn off light that had been indicating that a note was active
           trueKeybed.stopKeyPress(noteNum,noteVel);
+          trueKeybed_givenList.stopKeyPress(noteNum,noteVel);
           break;
         
         case 0xB0:
@@ -191,4 +193,3 @@ void updateSustainPedal(const byte &value_byte) {
   }
 }
   
-

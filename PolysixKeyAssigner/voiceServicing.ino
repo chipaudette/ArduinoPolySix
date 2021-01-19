@@ -435,9 +435,11 @@ void checkAndResetArpClock(const assignerState_t &localAssignerState, keybed_t &
 //or in chord memory, or unison, or weird combinations thereof.
 void updateVoiceAllocation(void)
 {
+  //by default, allocate voices based on the true keybed note presses
   //keyPressData_t *keybedData = trueKeybed.getKeybedDataP();
   keybed_t *keybed = &trueKeybed;
 
+  //but, if the arp is active, we'll allocate the voices based on fake "keybed" that arpManager has fabricated
   if ((ARP_AS_DETUNE == false) & (assignerState.arp == ON)) {
     //update the arpeggiator
     arpManager.updateArp(assignerState);
@@ -739,5 +741,3 @@ void updateLFO(int voiceInd) {
   //LFO_noteBend_x16bits = (LFO_noteBend_x16bits*l_aftertouch_val) >> 7;  //aftertouch can be 0-127, which means divide by 127, which means 7 bits
 
 }
-
-

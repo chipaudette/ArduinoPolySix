@@ -19,6 +19,7 @@
 #define N_KEY_PRESS_DATA 6   //should be 6
 #define N_POLY 6    //should be 6
 #define N_VOICE_SLOTS 8
+#define N_KEY_LIST_LEN 16  //for sequencer
 #define INDEX_LAST_VOICE (8)    //index of the last voice period
 #define INDEX_LAST_PERIOD (9)  //index of whatever is the last period
 #define ON (1)
@@ -95,7 +96,7 @@ class keyPressData_t {
       }
     };
     int isGateActiveOrLatched(void) {
-      if (isGateActive() | isLatched) {
+      if (isGateActive() || isLatched) {
         return ON;
       } else {
         return OFF;
@@ -302,23 +303,36 @@ typedef struct {
   int detuneFactor[N_POLY];
 } chordMemState_t;
 
-class keybed_t {
+class keybed_base_t {
+  public: 
+    keybed_base_t(void) {};
+    virtual void addKeyPress(const int &,const int &) = 0;
+    virtual void stopKeyPress(const int &,const int &) = 0;
+    virtual int getMaxKeySlots(void) = 0;
+
+    virtual keyPressData_t* getKeybedDataP(void)=0;
+    virtual keyPressData_t* getKeybedDataP(const int &Ikey)=0;
+    
+  protected: 
+    int nKeyPressSlots;
+};
+
+class keybed_t : public keybed_base_t {
   public:
     keybed_t(void);
-    void resetAllKeybedData(void);
-    void resetKeyPress(const int &);
-    void addKeyPress(const int &,const int &);
+    virtual void resetAllKeybedData(void);
+    virtual void resetKeyPress(const int &);
+    virtual void addKeyPress(const int &,const int &);
     void createKeyPress(const int &, const int &, const int &);
-    void stopKeyPress(const int &,const int &);
-    void stopKeyPressByInd(const int &ind, const int &noteVel); 
-    void stopAllKeyPresses(void);
+    virtual void stopKeyPress(const int &,const int &);
+    virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
+    virtual void stopAllKeyPresses(void);
     void printKeyPressState(void);
-    keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
-    keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
+    virtual keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
+    virtual keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
     int isGateActive(const int &Ikey);
     int isAnyGateActive(void);
-    keyPressData_t allKeybedData[N_KEY_PRESS_DATA];
-    void deactivateHold(void);
+    virtual void deactivateHold(void);
     int get_nKeyPressSlots(void) { return nKeyPressSlots; };
     void set_nKeyPressSlots(const int &);
     
@@ -330,20 +344,58 @@ class keybed_t {
     void findNewestKeyPresses(int const &,int []);
     int findNewestPressedOrHeldKeys(const int &, int []);
     int findNewestReleasedKeys(int const &,int [], int const &);
+
+    static const int maxNKeyPressSlots = N_KEY_PRESS_DATA;
+    keyPressData_t allKeybedData[maxNKeyPressSlots];
+    virtual int getMaxKeySlots(void);
+ 
     
-  private:
-    int nKeyPressSlots;
+  protected:
     void reduceAndConsolodate(const int &);
+};
+
+class keybed_givenlist_t : public keybed_base_t {
+  public:
+    keybed_givenlist_t(void);
+
+    virtual void resetAllKeybedData(void);
+    virtual void resetKeyPress(const int &);
+    virtual void addKeyPress(const int &,const int &);
+    virtual void createKeyPress(const int &, const int &, const int &);
+    virtual void stopKeyPress(const int &,const int &);
+    virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
+    virtual void stopAllKeyPresses(void);
+
+    virtual keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
+    virtual keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
+
+    bool isPressedOrHeld(const int &);
+    virtual int getActiveNoteIndByOrder(const int &);
+    
+    virtual void deactivateHold(void);
+    
+
+    static const int maxNKeyPressSlots = N_KEY_LIST_LEN;
+    keyPressData_t allKeybedData[maxNKeyPressSlots];
+    virtual int getMaxKeySlots(void);
+
+    int getNextInd(void) { return next_ind; };
+    
+  protected:
+    int next_ind = 0;
+    int incrementNextInd(void);
+    
 };
 
 void deactivateHold(keybed_t *);
 
 #define ARP_SORTMODE_NOTENUM 1
 #define ARP_SORTMODE_STARTTIME 2
+#define ARP_SORTMODE_GIVENLIST 3
 class arpManager_t {
   public:
-    arpManager_t(keybed_t *, keybed_t *);
-    void setInputAndOutputKeybeds(keybed_t *, keybed_t *);
+    arpManager_t(keybed_t *, keybed_t *, keybed_givenlist_t *);
+    void setInputAndOutputKeybeds(keybed_t *, keybed_t *, keybed_givenlist_t *);
     void startArp(const int &,const assignerState_t &);
     void startArp(const int &,const assignerState_t &,void (*)(void));
     void updateArp(const assignerState_t &);
@@ -360,8 +412,10 @@ class arpManager_t {
   private:
     keybed_t *inputKeybed;  //usually this is the "trueKeybed"
     keybed_t *outputKeybed;
-    keyPressData_t sortedNotes[N_KEY_PRESS_DATA];
-    int prevSortedNoteNums[N_KEY_PRESS_DATA];
+    keybed_givenlist_t *givenListKeybed;
+    static const int nSortedNotes = N_KEY_LIST_LEN; //maximum of N_KEY_LIST_LEN and N_KEY_PRESS_DATA
+    keyPressData_t sortedNotes[nSortedNotes]; 
+    int prevSortedNoteNums[nSortedNotes];
     int incrementToNextNote;
     int arpSortMode;
     int curArpStep;
@@ -378,11 +432,13 @@ class arpManager_t {
     void clearSortedNotes(void);
     void sortArpNotesByPitch(void);
     void sortArpNotesByStartTime(void);
+    void sortArpNotesGivenOrder(void);
     void adjustArpStepToFollowCurNote(void);
     int executePostNoteUpdateFunction;
     void (*p_postNoteUpdateFunction)(void);
+
+    int debug__call_count = 0;
   
 };
 
 #endif
-

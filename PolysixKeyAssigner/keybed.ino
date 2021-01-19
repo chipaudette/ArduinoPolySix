@@ -1,23 +1,26 @@
 
-
 #include "dataTypes.h"
 
+//const int keybed_t::maxNKeyPressSlots = N_KEY_PRESS_DATA;
 
 keybed_t::keybed_t(void) {
   //initialize each keypress
    resetAllKeybedData();
-   nKeyPressSlots = N_KEY_PRESS_DATA; //default value
+   nKeyPressSlots = maxNKeyPressSlots; //default value
 }
 
+
 void keybed_t::resetAllKeybedData(void) {
-  for (int Ikey = 0; Ikey < N_KEY_PRESS_DATA; Ikey++) {
+  int n = getMaxKeySlots();
+  for (int Ikey = 0; Ikey < n; Ikey++) {
     resetKeyPress(Ikey);
   }
 }
   
 void keybed_t::resetKeyPress(const int &noteIndex) 
 {
-  if (noteIndex < N_KEY_PRESS_DATA) {
+  int n = getMaxKeySlots();
+  if (noteIndex < n) {
     //allNotes[noteIndex].noteID = 0;
     int noteNum = allKeybedData[noteIndex].noteNum; //do I really need to keep the noteNum when resetting?
     allKeybedData[noteIndex].reset();
@@ -29,7 +32,7 @@ void keybed_t::resetKeyPress(const int &noteIndex)
 //poly-unison and poly-chordmem
 void keybed_t::set_nKeyPressSlots(const int &newVal) 
 {
-  int val = min(N_KEY_PRESS_DATA,newVal);
+  int val = min(getMaxKeySlots(),newVal);
   //Serial.print("keybed.set_nKeyPressSlots: setting to ");
   //Serial.println(val);
   
@@ -183,7 +186,7 @@ void keybed_t::stopKeyPress(const int &noteNum,const int &noteVel) {
     stopAllKeyPresses();
   } else {
     //find any and all matching noteNum and stop them all
-    for (ind = 0; ind < N_KEY_PRESS_DATA; ind++) {
+    for (ind = 0; ind < maxNKeyPressSlots; ind++) {
       if (allKeybedData[ind].noteNum == noteNum) {
         stopKeyPressByInd(ind,noteVel);
       }
@@ -203,7 +206,7 @@ void keybed_t::stopKeyPressByInd(const int &ind, const int &noteVel)
     
 void keybed_t::stopAllKeyPresses(void) {
   millis_t end_time = millis();
-  for (int ind=0; ind < N_KEY_PRESS_DATA; ind++) {
+  for (int ind=0; ind < maxNKeyPressSlots; ind++) {
     if (allKeybedData[ind].isPressed == ON) {
       allKeybedData[ind].isPressed = OFF;
       allKeybedData[ind].end_millis = end_time;
@@ -214,7 +217,7 @@ void keybed_t::stopAllKeyPresses(void) {
 
 void keybed_t::printKeyPressState(void) {
   Serial.print("KeyPresses: ");
-  for (int ind=0; ind < N_KEY_PRESS_DATA; ind++) {
+  for (int ind=0; ind < maxNKeyPressSlots; ind++) {
     Serial.print(ind);
     Serial.print("=");
     Serial.print(allKeybedData[ind].noteNum);
@@ -267,7 +270,7 @@ void keybed_t::deactivateHold(void)
 {
   //step through each voice and release the artificially held notes.
   //keyPressData_t *keyPress;
-  for (int i=0; i<N_KEY_PRESS_DATA;i++) {
+  for (int i=0; i<maxNKeyPressSlots;i++) {
     allKeybedData[i].isHeld=OFF;
     if (allKeybedData[i].isPressed == OFF) {  //only release the notes that aren't still being held by the user
       //also update the release time
@@ -294,11 +297,11 @@ void keybed_t::findNewestKeyPresses(int const &nKeyPressesToFind,int newestInds[
  
 int keybed_t::findNewestPressedOrHeldKeys(const int &nKeyPressesToFind, int newestInds[])
 {
-  static boolean acceptanceCriteria[N_KEY_PRESS_DATA];
-  static millis_t relevantMillis[N_KEY_PRESS_DATA];
+  static boolean acceptanceCriteria[maxNKeyPressSlots];
+  static millis_t relevantMillis[maxNKeyPressSlots];
   
   //assess the acceptance criteria for each candidate key press
-  for (int I_key = 0; I_key < N_KEY_PRESS_DATA;  I_key++) {
+  for (int I_key = 0; I_key < maxNKeyPressSlots;  I_key++) {
     acceptanceCriteria[I_key] = ((allKeybedData[I_key].isPressed==ON) | (allKeybedData[I_key].isHeld==ON));
     if (I_key >= nKeyPressSlots) acceptanceCriteria[I_key] = false;
     relevantMillis[I_key]=allKeybedData[I_key].start_millis;
@@ -314,11 +317,11 @@ int keybed_t::findNewestPressedOrHeldKeys(const int &nKeyPressesToFind, int newe
 //find the keys that have been most recently released
 int keybed_t::findNewestReleasedKeys(int const &nKeyPressesToFind,int newestInds[], int const &nDone)
 {
-  static boolean acceptanceCriteria[N_KEY_PRESS_DATA];
-  static millis_t relevantMillis[N_KEY_PRESS_DATA];
+  static boolean acceptanceCriteria[maxNKeyPressSlots];
+  static millis_t relevantMillis[maxNKeyPressSlots];
   
   //assess the acceptance criteria for each candidate key press
-  for (int I_key = 0; I_key < N_KEY_PRESS_DATA;  I_key++) {
+  for (int I_key = 0; I_key < maxNKeyPressSlots;  I_key++) {
     acceptanceCriteria[I_key] = true;  //everything is accepted in this case!
     if (I_key >= nKeyPressSlots) acceptanceCriteria[I_key] = false; //except those that are out of contention 
     relevantMillis[I_key]=max(allKeybedData[I_key].start_millis,allKeybedData[I_key].end_millis);
@@ -390,14 +393,14 @@ int findNewest(const int &nKeyPressesToFind,const int &nDone, boolean acceptance
 void keybed_t::reduceAndConsolodate(const int &newVal)
 {
   //copy current keybed data
-  keyPressData_t newKeybedData[N_KEY_PRESS_DATA];
-  for (int I_key = 0; I_key < N_KEY_PRESS_DATA; I_key++) {
+  keyPressData_t newKeybedData[maxNKeyPressSlots];
+  for (int I_key = 0; I_key < maxNKeyPressSlots; I_key++) {
     newKeybedData[I_key] = allKeybedData[I_key];
   }
   
   //find newest keys pressed
-  static int newestKeyInd[N_KEY_PRESS_DATA];
-  static int nToFind=min(N_KEY_PRESS_DATA,newVal);
+  static int newestKeyInd[maxNKeyPressSlots];
+  static int nToFind=min(maxNKeyPressSlots,newVal);
   findNewestKeyPresses(nToFind,newestKeyInd);
   
   //stop all notes in the main keybed structure
@@ -417,3 +420,136 @@ void keybed_t::reduceAndConsolodate(const int &newVal)
 //    return LOW;
 //  }
 //}
+
+int keybed_t::getMaxKeySlots(void) { return maxNKeyPressSlots; }
+
+// /////////////////////////////////////////////////////////////////////////////////////
+
+//const int keybed_givenlist_t::maxNKeyPressSlots = N_KEY_LIST_LEN;
+
+keybed_givenlist_t::keybed_givenlist_t(void) {
+  //initialize each keypress
+   //resetAllKeybedData();
+   nKeyPressSlots = maxNKeyPressSlots; //default value
+}
+
+
+void keybed_givenlist_t::resetAllKeybedData(void) {
+  int n = getMaxKeySlots();
+  for (int Ikey = 0; Ikey < n; Ikey++) resetKeyPress(Ikey);
+}
+
+void keybed_givenlist_t::resetKeyPress(const int &noteIndex) 
+{
+  int n = getMaxKeySlots();
+  if (noteIndex < n) {
+    //allNotes[noteIndex].noteID = 0;
+    int noteNum = allKeybedData[noteIndex].noteNum; //do I really need to keep the noteNum when resetting?
+    allKeybedData[noteIndex].reset();
+    allKeybedData[noteIndex].noteNum = noteNum;
+  }
+}
+
+void keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel) {
+  int ind = next_ind;
+  incrementNextInd();
+  
+  //create this note
+  resetKeyPress(ind);
+  createKeyPress(ind,noteNum,noteVel);
+
+  //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
+}
+
+void keybed_givenlist_t::createKeyPress(const int &ind, const int &noteNum, const int &noteVel) {
+  //static float fooFreq;
+  //static unsigned long foo_dPhase;
+  
+  allKeybedData[ind].noteNum = noteNum;
+  allKeybedData[ind].noteVel = noteVel;
+  allKeybedData[ind].isNewVelocity = true;
+  allKeybedData[ind].isPressed = ON;
+  allKeybedData[ind].isHeld = OFF;
+  if (isHoldNewNote()) allKeybedData[ind].isHeld = ON;
+  allKeybedData[ind].start_millis = millis();
+  allKeybedData[ind].end_millis = allKeybedData[ind].start_millis;
+}  
+
+int keybed_givenlist_t::incrementNextInd(void) { 
+  next_ind++;  
+  if (next_ind >= getMaxKeySlots()) next_ind = 0; 
+  return next_ind;
+}
+
+
+void keybed_givenlist_t::stopKeyPress(const int &noteNum,const int &noteVel) {
+  int ind=0;
+  
+  if (noteNum >= 120) {
+      //is a stop all command?
+    stopAllKeyPresses();
+  } else {
+    //find any and all matching noteNum and stop them all
+    for (ind = 0; ind < maxNKeyPressSlots; ind++) {
+      if (allKeybedData[ind].noteNum == noteNum) {
+        stopKeyPressByInd(ind,noteVel);
+      }
+    }
+  }
+}
+
+void keybed_givenlist_t::stopKeyPressByInd(const int &ind, const int &noteVel) 
+{
+  if (allKeybedData[ind].isPressed == ON) {
+    allKeybedData[ind].isPressed = OFF;
+    //allKeybedData[ind].noteVel = noteVel;  //don't send note-off velocity for now.  2015-10-11
+    //allKeybedData[ind].isNewVelocity = true;
+    allKeybedData[ind].end_millis = millis();
+  }
+}
+    
+void keybed_givenlist_t::stopAllKeyPresses(void) {
+  millis_t end_time = millis();
+  for (int ind=0; ind < maxNKeyPressSlots; ind++) {
+    if (allKeybedData[ind].isPressed == ON) {
+      allKeybedData[ind].isPressed = OFF;
+      allKeybedData[ind].end_millis = end_time;
+      allKeybedData[ind].isNewVelocity = false;
+    }
+  }
+}
+
+int keybed_givenlist_t::getActiveNoteIndByOrder(const int &active_index_in_order) { //count from zero
+  if (active_index_in_order < 0) return -1;
+  int count = -1;
+  int foo_ind = next_ind - 1; //start on the current index that is playing (but immediately increment past...which would then be the oldest
+  for (int i = 0; i < maxNKeyPressSlots; i++) {
+    foo_ind ++; //increment
+    if (foo_ind >= maxNKeyPressSlots) foo_ind = 0; //wrap around
+    if (isPressedOrHeld(foo_ind)) count++; //is this index an active note?  if so, increment the counter
+    if (count == active_index_in_order) return foo_ind; //once we've counted the requested active notes, return the index!
+  }
+  return -1;
+}
+
+void keybed_givenlist_t::deactivateHold(void) 
+{
+  //step through each voice and release the artificially held notes.
+  //keyPressData_t *keyPress;
+  for (int i=0; i < maxNKeyPressSlots; i++) {
+    allKeybedData[i].isHeld=OFF;
+    if (allKeybedData[i].isPressed == OFF) {  //only release the notes that aren't still being held by the user
+      //also update the release time
+      stopKeyPressByInd(i,RELEASE_VELOCITY_FROM_HOLD);
+    }
+  }
+}
+
+bool keybed_givenlist_t::isPressedOrHeld(const int &ind) {
+  if ((ind > -1) && (ind < maxNKeyPressSlots)) {
+    return ((allKeybedData[ind].isPressed==OFF) && (allKeybedData[ind].isHeld==OFF));
+  } 
+  return false;
+}
+
+int keybed_givenlist_t::getMaxKeySlots(void) { return maxNKeyPressSlots; }

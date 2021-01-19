@@ -53,11 +53,12 @@ void check_mem() {
 #include <EEPROM.h> //for storing the tuning factors
 
 //define our global variables
-keybed_t trueKeybed;  //this represents the keys pressed on the actual keybed
+keybed_t trueKeybed;  //this represents the keys pressed on the actual keybed (6 key limit)
+keybed_givenlist_t trueKeybed_givenList;  //this holds a longer list of key presses, in the order that they were pressed
 keybed_t arpGeneratedKeybed; //this represents the keys that are "pressed" by the arpeggiator
 voiceData_t allVoiceData[N_VOICE_SLOTS]; //these are the 6 voices of the polysix
 assignerState_t assignerState;
-arpManager_t arpManager(&trueKeybed,&arpGeneratedKeybed);
+arpManager_t arpManager(&trueKeybed,&arpGeneratedKeybed, &trueKeybed_givenList);
 assignerButtonState2_t assignerButtonState;
 chordMemState_t chordMemState;
 tuningModeState_t tuningModeState;
@@ -354,4 +355,3 @@ void measureInterruptTiming(void)
   ARP_period_micros = cur_micros - prev_ARP_tic_micros;
   prev_ARP_tic_micros = cur_micros;
 }
-

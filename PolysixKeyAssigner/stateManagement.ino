@@ -43,7 +43,7 @@ void updateKeyAssignerStateFromButtons(assignerButtonState2_t &cur_but_state)
   int prePedal_porta_setting_index = 0;
 
   //update the keypanel mode...interpret as arp mode or as standard/other mode?
-  updateKeyPanelMode(cur_but_state);
+  updateKeyPanelMode(cur_but_state); //one thing this does is update assignerState.keypanel_mode
 
   if (assignerState.keypanel_mode == KEYPANEL_MODE_TUNING) {
     interpretButtonsAndSwitches_KEYPANEL_TUNING(cur_but_state);  
@@ -369,10 +369,14 @@ void updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state)
       //let's try to run the arpeggiator
       if (assignerState.arp == ON) {
         //start arpeggiator
-        Serial.println(F("updateArpOnOffState: Arp On"));
+        Serial.print(F("updateArpOnOffState: Arp On. Hold = "));Serial.print(assignerState.hold);Serial.print(", latch = ");Serial.println(assignerState.arp_params.arp_latch);
         int mode = ARP_SORTMODE_NOTENUM;
         if (assignerState.hold == ON) {
-          mode = ARP_SORTMODE_STARTTIME;
+          if (assignerState.arp_params.arp_latch == OFF) {
+            mode = ARP_SORTMODE_STARTTIME;
+          } else { 
+            mode = ARP_SORTMODE_GIVENLIST;
+          }
           arpManager.startArp(mode,assignerState,deactivateHoldState); //tell the arp to deactivate the hold after it updates the notes for the ARP
         } else {
           arpManager.startArp(mode,assignerState); //the basic start arp command
@@ -578,9 +582,16 @@ void activateHoldState(boolean enableHoldState) {
   //Serial.println("stateManagement: activate hold...");
 
   //loop over each key and activate hold...flip the isHeld to ON
-  for (int i; i<N_KEY_PRESS_DATA;i++) {
+  for (int i; i < trueKeybed.getMaxKeySlots(); i++) {
     //if (allKeybedData[i].isPressed==ON) allKeybedData[i].isHeld=ON;
     keyPress = trueKeybed.getKeybedDataP(i);
+    if (keyPress->isPressed==ON) keyPress->isHeld=ON;
+  }
+
+
+  //loop over each key and activate hold...flip the isHeld to ON
+  for (int i; i < trueKeybed_givenList.getMaxKeySlots(); i++) {
+    keyPress = trueKeybed_givenList.getKeybedDataP(i);
     if (keyPress->isPressed==ON) keyPress->isHeld=ON;
   }
 
@@ -597,7 +608,8 @@ void deactivateHoldState(void) {
 
   //change the hold state on keybed notes
   trueKeybed.deactivateHold();
-  arpManager.deactivateHold(); //stop the arpeggiators held notes, too
+  trueKeybed_givenList.deactivateHold();
+  arpManager.deactivateHold(); //stop the arpeggiator's held notes, too
 
 }
 
@@ -1086,5 +1098,3 @@ void setNewDetuneValue(const micros_t &prev_knob_value)
   //I think that the fastest is 50 Hz, which is 20000 micros, which I want to be 1
   detune_noteBend_x16bits = (1000000L / prev_knob_value)*1000L;
 }
-
-
