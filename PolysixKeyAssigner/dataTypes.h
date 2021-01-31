@@ -294,6 +294,7 @@ class assignerButtonState2_t {
     pushButtonStateManager sustainPedal;
     pushButtonStateManager portamentoPedal;
     pushButtonStateManager fromTapeToggle;  
+    pushButtonStateManager tapeEnableToggle;
 };
 
 typedef struct {

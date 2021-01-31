@@ -210,23 +210,29 @@ void updateKeyPanelMode(assignerButtonState2_t &cur_but_state)
   //look first to see if coming out of tuning mode
   if (assignerState.keypanel_mode == KEYPANEL_MODE_TUNING) {
     //are we switching out of this mode?
-    if (cur_but_state.fromTapeToggle.state == LOW) {
+    if (cur_but_state.tapeEnableToggle.state == LOW) {
       //switch out of tuning mode
-      saveEEPROM();
-      assignerState.keypanel_mode = KEYPANEL_MODE_OTHER;
-      
       Serial.println(F("stateManagement: updateKeyPanelMode: switching out of tuning mode..."));
+      Serial.println(F("stateManagement: updateKeyPanelMode: saving tuning state to EEPROM..."));
+      saveEEPROM();
+            
+      if (cur_but_state.fromTapeToggle.state == HIGH) {
+        //has the panel mode state changed?
+        assignerState.keypanel_mode = KEYPANEL_MODE_OTHER;
+      } else {   
+        assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
+      }
     }
+
   } else {
     //look to see if going into tuning mode
-    if ( (cur_but_state.fromTapeToggle.state == HIGH) && (cur_but_state.fromTapeToggle.didStateChange()) \
-            && (cur_but_state.arp_on.state == ON) ) {
+    if ( (cur_but_state.tapeEnableToggle.state == HIGH) && (cur_but_state.tapeEnableToggle.didStateChange()) ) {
       switchToTuningMode();
       assignerState.keypanel_mode = KEYPANEL_MODE_TUNING;
       Serial.println(F("stateManagement: updateKeyPanelMode: switching to tuning mode..."));
         
-      //make sure that we don't kick into ARP mode when we let go of the ARP button
-      cur_but_state.arp_on.set_user_beenPressedAgainToFalse(); //this means that the arp on/off won't toggle when you finally release the arp button
+      //make sure that we don't kick into ARP mode when we let go of the ARP button  (THIS WAS THE OLD WAY OF GETTING INTO TUNING MODE)
+      //cur_but_state.arp_on.set_user_beenPressedAgainToFalse(); //this means that the arp on/off won't toggle when you finally release the arp button
 
     } else if (cur_but_state.fromTapeToggle.state == HIGH) {
       //has the panel mode state changed?

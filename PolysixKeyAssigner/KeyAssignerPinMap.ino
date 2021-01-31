@@ -26,6 +26,7 @@
 #define PS_8FT_PIN  3    //moved Oct 2015 to free-up Serial2
 #define PS_RESET_PIN 4   //moved Oct 2015 to free-up Serial2
 #define SW_FROMTAPE_PIN 53
+#define SW_TAPEENABLE_PIN 52  //added Jan 31, 2021 for switching to tuning mode
 #define PORTAMENTO_PEDAL_PIN 2
 #define SUSTAIN_PEDAL_PIN 18
 #define PS_ACKI_PIN  (19)      //this is attached to an interrupt #4 (see "PS_ACKI_INT" in PolysixKeyAssigner.ino)  http://arduino.cc/en/Reference/AttachInterrupt 
@@ -111,6 +112,8 @@ void setupDigitalPins(void) {
   digitalWrite(SUSTAIN_PEDAL_PIN,HIGH);
   pinMode(SW_FROMTAPE_PIN,INPUT);
   digitalWrite(SW_FROMTAPE_PIN,HIGH);
+
+  pinMode(SW_TAPEENABLE_PIN,INPUT); //already is pulled high to 5V by circuit
 
 }
 
@@ -199,6 +202,7 @@ void readButtons(void)
   updateFootswitchHoldState(assignerButtonState.sustainPedal.state,assignerButtonState.sustainPedal.didStateChange());
   assignerButtonState.portamentoPedal.updateState(!digitalRead(PORTAMENTO_PEDAL_PIN));
   assignerButtonState.fromTapeToggle.updateState(!digitalRead(SW_FROMTAPE_PIN));
+  assignerButtonState.tapeEnableToggle.updateState(!digitalRead(SW_TAPEENABLE_PIN)); //has external pullup, so LOW is the active state
   
 }
 
@@ -359,5 +363,3 @@ void setLEDPins()
 
 
 #endif
-
-
