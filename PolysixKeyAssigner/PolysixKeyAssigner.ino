@@ -22,9 +22,9 @@
 
 //data type definitions and global macros
 #include "dataTypes.h"
+#include "KeyAssignerPinMap.h"  //Mapping of all the digital pins is defined in KeyAssignerPinMap
+#include "ribbon.h"
 
-//Mapping of all the digital pins is defined in KeyAssignerPinMap
-//include <KeyAssignerPinMap.ino>
 
 /* This function places the current value of the heap and stack pointers in the
  * variables. You can call it from any place in your code and save the data for
@@ -86,6 +86,7 @@ int32_t perVoiceTuningFactors_x16bits[N_POLY][N_OCTAVES_TUNING][1];
 int32_t tuningAdjustmentFactor_x16bits = 1000L; //10,000 is about 20cents, so 1000 is about 2 cents
 Adafruit_MCP4725 dac;
 int32_t detune_decay_x16bits = 3500L;
+Ribbon myRibbon;
 
 // ///// Aftertouch curves
 //4-Segment Linear with trans at 40, 80, and 110
@@ -97,6 +98,8 @@ long voiceDuration_usec = 676; //standard is 676, human debugging is 250000
 //define the timer callback function
 void timer3_callback() { newTimedAction = true; }
 
+//include some functions that are useful
+#include "hardwareServices.h"
 
 void switchStateManager::printUpdateVals(const int &state, const int &debounceCounter)
 {
@@ -112,7 +115,7 @@ void switchStateManager::printUpdateVals(const int &state, const int &debounceCo
 void setup() {
   //setup the serial bus
   Serial2.begin(2*115200); //for communication to Arduino/Teensy doing velocity processing
-  Serial3.begin(31200);  //set to 31200 for MIDI
+  Serial3.begin(31250);  //set to 31200 for MIDI  (or 31250?)
   Serial.begin(115200);  //for debugging via USB
 
   //setup the pins that are plugging into the empty 8049-217 socket
@@ -140,6 +143,9 @@ void setup() {
   //pinMode(LFO_OUT_PIN,OUTPUT);
   //Timer4.initialize(LFO_PWM_MICROS/2);
   //Timer4.pwm(LFO_OUT_PIN,LFO_MAX,LFO_PWM_MICROS+1); //expects duty to be 10 bit (ie, 0-1023)
+
+  //setup the ribbon
+  myRibbon.setup_ribbon(RIBBON_PIN, &trueKeybed);
 
   //if (DEBUG_TO_SERIAL) 
   //Serial.println("Finished with Setup");
@@ -171,6 +177,9 @@ void loop(void) {
 
     //service USB Serial
     serviceSerial();  // see definition later in this file
+
+    //service the ribbon
+    myRibbon.service_ribbon(millis());
   }
   
 }

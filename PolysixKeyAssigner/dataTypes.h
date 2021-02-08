@@ -1,7 +1,7 @@
 
 
-#ifndef _data_types_h
-#define _data_types_h
+#ifndef _dataTypes_H
+#define _dataTypes_H
 
 //define some global macros
 
@@ -128,6 +128,8 @@ typedef struct {
   int forceRetrigger;
   int isNewVelocity;
 } voiceData_t;
+
+
 
 typedef struct {
   int arp_latch;
@@ -307,8 +309,9 @@ typedef struct {
 class keybed_base_t {
   public: 
     keybed_base_t(void) {};
-    virtual void addKeyPress(const int &,const int &) = 0;
+    virtual int addKeyPress(const int &,const int &) = 0;
     virtual void stopKeyPress(const int &,const int &) = 0;
+    virtual void stopKeyPressByInd(const int &ind, const int &noteVel)= 0;
     virtual int getMaxKeySlots(void) = 0;
 
     virtual keyPressData_t* getKeybedDataP(void)=0;
@@ -323,7 +326,7 @@ class keybed_t : public keybed_base_t {
     keybed_t(void);
     virtual void resetAllKeybedData(void);
     virtual void resetKeyPress(const int &);
-    virtual void addKeyPress(const int &,const int &);
+    virtual int addKeyPress(const int &,const int &);
     void createKeyPress(const int &, const int &, const int &);
     virtual void stopKeyPress(const int &,const int &);
     virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
@@ -361,7 +364,7 @@ class keybed_givenlist_t : public keybed_base_t {
 
     virtual void resetAllKeybedData(void);
     virtual void resetKeyPress(const int &);
-    virtual void addKeyPress(const int &,const int &);
+    virtual int addKeyPress(const int &,const int &);
     virtual void createKeyPress(const int &, const int &, const int &);
     virtual void stopKeyPress(const int &,const int &);
     virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 

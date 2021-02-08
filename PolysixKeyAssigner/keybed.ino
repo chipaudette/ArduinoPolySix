@@ -44,7 +44,7 @@ void keybed_t::set_nKeyPressSlots(const int &newVal)
   nKeyPressSlots = val;   
 }
 
-void keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
+int keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
   int ind;
   
   //Serial.print("keybed.addKeyPress: nKeyPressSlots = ");
@@ -75,6 +75,7 @@ void keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
   createKeyPress(ind,noteNum,noteVel);
 
   //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
+  return ind;
 }
 
 int keybed_t::findOldestKeyPress_NotPressedNotHeld(void) {
@@ -450,7 +451,7 @@ void keybed_givenlist_t::resetKeyPress(const int &noteIndex)
   }
 }
 
-void keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel) {
+int keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel) {
   int ind = next_ind;
   incrementNextInd();
   
@@ -459,6 +460,7 @@ void keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel) {
   createKeyPress(ind,noteNum,noteVel);
 
   //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
+  return ind;
 }
 
 void keybed_givenlist_t::createKeyPress(const int &ind, const int &noteNum, const int &noteVel) {
