@@ -45,6 +45,9 @@ void keybed_t::set_nKeyPressSlots(const int &newVal)
 }
 
 int keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
+  return addKeyPress((float)noteNum, noteVel);
+}
+int keybed_t::addKeyPress(const float &noteNum_float,const int &noteVel) {
   int ind;
   
   //Serial.print("keybed.addKeyPress: nKeyPressSlots = ");
@@ -72,7 +75,7 @@ int keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
   
   //create this note
   resetKeyPress(ind);
-  createKeyPress(ind,noteNum,noteVel);
+  createKeyPress(ind,noteNum_float,noteVel);
 
   //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
   return ind;
@@ -165,11 +168,12 @@ int keybed_t::get2ndNewestKeyPress(void) {
   return newest2_ind;
 }
 
-void keybed_t::createKeyPress(const int &ind, const int &noteNum, const int &noteVel) {
+void keybed_t::createKeyPress(const int &ind, const float &noteNum_float, const int &noteVel) {
   //static float fooFreq;
   //static unsigned long foo_dPhase;
-  
-  allKeybedData[ind].noteNum = noteNum;
+
+  //allKeybedData[ind].noteNum = noteNum;
+  allKeybedData[ind].setNoteNum(noteNum_float);
   allKeybedData[ind].noteVel = noteVel;
   allKeybedData[ind].isNewVelocity = true;
   allKeybedData[ind].isPressed = ON;
@@ -452,22 +456,27 @@ void keybed_givenlist_t::resetKeyPress(const int &noteIndex)
 }
 
 int keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel) {
+  return addKeyPress((float)noteNum,noteVel);
+}
+
+int keybed_givenlist_t::addKeyPress(const float &noteNum_float,const int &noteVel) {
   int ind = next_ind;
   incrementNextInd();
   
   //create this note
   resetKeyPress(ind);
-  createKeyPress(ind,noteNum,noteVel);
+  createKeyPress(ind,noteNum_float,noteVel);
 
   //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
   return ind;
 }
 
-void keybed_givenlist_t::createKeyPress(const int &ind, const int &noteNum, const int &noteVel) {
+void keybed_givenlist_t::createKeyPress(const int &ind, const float &noteNum_float, const int &noteVel) {
   //static float fooFreq;
   //static unsigned long foo_dPhase;
   
-  allKeybedData[ind].noteNum = noteNum;
+  //allKeybedData[ind].noteNum = noteNum;
+  allKeybedData[ind].setNoteNum(noteNum_float);
   allKeybedData[ind].noteVel = noteVel;
   allKeybedData[ind].isNewVelocity = true;
   allKeybedData[ind].isPressed = ON;

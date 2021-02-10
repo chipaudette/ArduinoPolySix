@@ -145,7 +145,7 @@ void setup() {
   //Timer4.pwm(LFO_OUT_PIN,LFO_MAX,LFO_PWM_MICROS+1); //expects duty to be 10 bit (ie, 0-1023)
 
   //setup the ribbon
-  myRibbon.setup_ribbon(RIBBON_PIN, &trueKeybed);
+  myRibbon.setup_ribbon(RIBBON_PIN, RIBBON_REF_PIN, &trueKeybed);
 
   //if (DEBUG_TO_SERIAL) 
   //Serial.println("Finished with Setup");

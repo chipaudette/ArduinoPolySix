@@ -12,6 +12,7 @@ void initializeVoiceData(voiceData_t voiceData[], const int &N)
   for (int i = 0; i < N; i++) {
     voiceData[i].keyPressID = EMPTY_VOICE; //index into keypress array
     voiceData[i].noteNum = 0;
+    voiceData[i].targNoteNum_x16bits = ((long)voiceData[i].noteNum) << 16;
     voiceData[i].noteVel = 0;
     voiceData[i].curNoteNum_x16bits = voiceData[i].noteNum << 16;
     voiceData[i].curAttackDetuneFac_x16bits = 0;
@@ -154,23 +155,26 @@ byte getPitchByte(const int &voiceInd)
 #define NoteNumOffsetForRounding (32768L)  // (2^(16 bits)-1) / 2 = (32768) 
 
   if (voiceInd == 7) {
-    //always return C7 (top note of the PolySix)
+    //for voiceInd 7, always return C7 (top note of the PolySix)
     curNoteNum_x16bits = ((long)C7_NOTE_NUM) << 16;
   } else {
     if (voiceInd == 8) {
-      //always return the pitch byte for voice 1
+      //for voiceInd 8, always return the pitch byte for voice 1
       //targNoteNum=allVoiceData[0].noteNum; //target pitch
       curNoteNum_x16bits = allVoiceData[0].curNoteNum_x16bits; //this is the value last used for note 0, so that's all we need
     } else {
       //for voices 1-6, get the note number of the current voice index (where C0 on the Polysix s zero)
-      int noteNum = allVoiceData[voiceInd-1].noteNum;
+      //int noteNum = allVoiceData[voiceInd-1].noteNum;
+      targNoteNum_x16bits = allVoiceData[voiceInd-1].targNoteNum_x16bits;
       if (assignerState.octave == OCTAVE_8FT) {
-        noteNum += 12;
+        //noteNum += 12;
+        targNoteNum_x16bits += (((long)12) << 16);
       } else if (assignerState.octave == OCTAVE_4FT) {
-        noteNum += 24;
+        //noteNum += 24;
+        targNoteNum_x16bits += (((long)24) << 16);
       }
-      targNoteNum_x16bits = ((long)noteNum) << 16; //target pitch
-      tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,noteNum); //voiceInd starts at one.
+      //targNoteNum_x16bits = ((long)noteNum) << 16; //target pitch
+      tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,allVoiceData[voiceInd-1].noteNum); //voiceInd starts at one.
       curNoteNum_x16bits = allVoiceData[voiceInd-1].curNoteNum_x16bits; //current pitch
 
       //compute portamento
@@ -465,7 +469,7 @@ void updateVoiceAllocation(void)
 //allocate the voices for poly mode
 void allocateVoiceForPoly(keybed_t *keybed)
 {
-  boolean isNoteChanging = false;
+  //boolean isNoteChanging = false;
   int newInd = 0;
   int Ikey;
   keyPressData_t *allKeybedData = keybed->getKeybedDataP();
@@ -473,11 +477,7 @@ void allocateVoiceForPoly(keybed_t *keybed)
 
   //there are only six voices and six keypress slots, so just pass them through
   for (int Ivoice = 0; Ivoice < nVoices; Ivoice++) { //Ivoice starts at zero
-    if ((allVoiceData[Ivoice].noteNum == allKeybedData[Ivoice].noteNum) && (allKeybedData[Ivoice].isNewVelocity == false)) {
-      isNoteChanging = false;
-    } else {
-      isNoteChanging = true;
-    }
+
 
     Ikey = Ivoice; //this is the key assumption for this function
     //assignKeyPressToVoice(keybedData,Ikey,Ivoice);
@@ -490,7 +490,8 @@ void allocateVoiceForPoly(keybed_t *keybed)
     //      allVoiceData[Ivoice].curAttackDetuneFac_x16bits = ((int32_t)attackScaleFac)*(detune_noteBend_x16bits>>3);
     //    }
 
-    if (isNoteChanging) { //is the pitch of this voice changing?
+    //if the note is changing, update some backup information to helmet the portamento
+    if ((allVoiceData[Ivoice].noteNum == allKeybedData[Ivoice].noteNum) && (allKeybedData[Ivoice].isNewVelocity == false)) { //is the note changing?
       //for the polyphonic portamento, set the "previous" pitch of this voice to the previous note played by any voice
       newInd = keybed->get2ndNewestKeyPress(); //find the previous note...this should probably search the VoiceData structure, not the keybed structure
       if (newInd >= 0) { //if it is valid, proceed
@@ -627,6 +628,7 @@ void assignKeyPressToVoice(keyPressData_t *keybedData, int const &I_key, int con
   //is valid, go ahead
   allVoiceData[I_voice].keyPressID = I_key;  //index into keypress array
   allVoiceData[I_voice].noteNum = keybedData[I_key].noteNum;
+  allVoiceData[I_voice].targNoteNum_x16bits = keybedData[I_key].targNoteNum_x16bits;
   allVoiceData[I_voice].noteVel = keybedData[I_key].noteVel;
   allVoiceData[I_voice].noteGate = keybedData[I_key].isGateActive();
   allVoiceData[I_voice].start_millis =  keybedData[I_key].start_millis;

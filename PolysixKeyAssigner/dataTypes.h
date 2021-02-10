@@ -77,7 +77,8 @@ typedef long int int32_t;
 class keyPressData_t {
   public:
     keyPressData_t(void) { reset(); };
-    int noteNum;
+    int noteNum;  //target pitch, rounteded to nearest note
+    long int targNoteNum_x16bits;  //target pitch, higher resolution to handle robbon
     int noteVel;
     //unsigned int noteReleaseVel;
     int isPressed; //ON or OFF
@@ -106,6 +107,16 @@ class keyPressData_t {
       noteNum = 0;  noteVel = 0;  isPressed = OFF;  isHeld = OFF; isLatched = OFF;
       start_millis = 0;  end_millis = 0;  forceRetrigger = true; isNewVelocity = OFF;
     };
+    int setNoteNum(float noteNum_float) {
+      noteNum = (int)(noteNum_float+0.5f);
+      targNoteNum_x16bits = (long int)((noteNum_float * (65536.0f))+0.5f); //left shift by 16 bits and convert to long int
+      return noteNum;
+    }
+    int setNoteNum(int _noteNum) {
+      noteNum = _noteNum;
+      targNoteNum_x16bits = ((long)_noteNum) << 16; //left shift by 16 bits and convert to long int
+      return noteNum;
+    }
 //    void copyFrom(const keyPressData_t &input) {
 //      noteNum = input.noteNum;      noteVel = input.noteVel;      isPressed = input.isPressed;      isHeld = input.isHeld;
 //      start_millis = input.start_millis;      end_millis = input.end_millis;      forceRetrigger = input.forceRetrigger;
@@ -117,8 +128,9 @@ class keyPressData_t {
 //data structure defining what's happening in a voice
 typedef struct {
   int keyPressID;  //index into keypress array
-  int noteNum;
-  int32_t curNoteNum_x16bits;
+  int noteNum; //target note number
+  long int targNoteNum_x16bits;    //target pitch of note, higher resolution (to handle in-between pitches from ribbon, for example)
+  int32_t curNoteNum_x16bits; //current pitch of note (might not match the target pitch due to portamento, for instance)
   int32_t curAttackDetuneFac_x16bits;
   int noteVel;
   //unsigned int noteReleaseVel;
@@ -310,6 +322,7 @@ class keybed_base_t {
   public: 
     keybed_base_t(void) {};
     virtual int addKeyPress(const int &,const int &) = 0;
+    virtual int addKeyPress(const float &,const int &) = 0;
     virtual void stopKeyPress(const int &,const int &) = 0;
     virtual void stopKeyPressByInd(const int &ind, const int &noteVel)= 0;
     virtual int getMaxKeySlots(void) = 0;
@@ -327,7 +340,9 @@ class keybed_t : public keybed_base_t {
     virtual void resetAllKeybedData(void);
     virtual void resetKeyPress(const int &);
     virtual int addKeyPress(const int &,const int &);
-    void createKeyPress(const int &, const int &, const int &);
+    virtual int addKeyPress(const float &,const int &);
+    //virtual void createKeyPress(const int &, const int &, const int &);
+    virtual void createKeyPress(const int &, const float &, const int &);
     virtual void stopKeyPress(const int &,const int &);
     virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
     virtual void stopAllKeyPresses(void);
@@ -365,7 +380,9 @@ class keybed_givenlist_t : public keybed_base_t {
     virtual void resetAllKeybedData(void);
     virtual void resetKeyPress(const int &);
     virtual int addKeyPress(const int &,const int &);
-    virtual void createKeyPress(const int &, const int &, const int &);
+    virtual int addKeyPress(const float &,const int &);
+    //virtual void createKeyPress(const int &, const int &, const int &);
+    virtual void createKeyPress(const int &, const float &, const int &);
     virtual void stopKeyPress(const int &,const int &);
     virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
     virtual void stopAllKeyPresses(void);

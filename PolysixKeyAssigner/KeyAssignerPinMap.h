@@ -35,6 +35,7 @@
 #define PS_ACKI_PIN  (19)      //this is attached to an interrupt #4 (see "PS_ACKI_INT" in PolysixKeyAssigner.ino)  http://arduino.cc/en/Reference/AttachInterrupt 
 //define LFO_OUT_PIN (7) //pins 6, 7, 8 are controlled by Timer4 on the Mega 2560
 #define RIBBON_PIN A7
+#define RIBBON_REF_PIN A6  //set this to input_pullup.  It's connected to AREF and its connected to gnd via 20K
 
 //Define some constants
 #define BUT_ARP_FULL_BIT 7

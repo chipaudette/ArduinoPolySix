@@ -5,7 +5,7 @@
 
 #include "dataTypes.h"
 
-#define DEBUG_RIBBON false
+#define DEBUG_RIBBON  false
 #define PRINT_CAL_TEXT false
 
 #define RIBBON_SPAN (1023)
@@ -14,7 +14,7 @@
 //define RIB_NOTE_NUM_IF_NOTE_OFF -1.0
 #define RIB_NOTE_ON_VEL 127
 #define RIB_NOTE_OFF_VEL 127
-#define RIB_NOTE_OFFSET (12.0f)
+#define RIB_NOTE_OFFSET (12.0f)    //the bottom of the ribbon would normally issue note zero.  This adds an offset to issue a different note
 
 class Ribbon {
   public:
@@ -22,19 +22,26 @@ class Ribbon {
     
     //int ribbon_max_val = 339,ribbon_min_val = 13; //for my Arduino UNO
     //int ribbon_max_val = 520,ribbon_min_val = 22; //for my Arduino UNO, External 3.3V ref
-    int ribbon_max_val = 333,ribbon_min_val = 13; //for my Arduino Micro and Arduino Mega
-    float R_pullup_A3_kOhm = 0.0;
-    float R_ribbon_min_kOhm = 0.0;
-    const float R_ribbon_max_kOhm = 17.45;
-    const float ribbon_span_half_steps_float = 36;
+    //int ribbon_max_val = 333,ribbon_min_val = 13; //for my Arduino Micro and Arduino Mega
+    int ribbon_max_val = 798,ribbon_min_val = 33; //using analog reference via 
+    float ribbon_max_val_scaled=0.0f, ribbon_min_val_scaled = 0.0f; //to be set later
+    
+    float R_pullup_A3_kOhm = 0.0; //to be set later
+    float R_ribbon_min_kOhm = 0.005;
+    const float R_ribbon_max_kOhm = 17.3;  
+    const float ribbon_span_half_steps_float = 36.0; //total span of the ribbon (3 octaves, C to C)
     const float ribbon_span_extra_half_steps_float = 0.25;
+    float Vin_Vref = 1.0; //to be set later
+    float Vin_Vref_SPAN = 1.0; //to be set later
+    
     //const int max_allowed_jump_steps = 5;
     //boolean flag_bend_range_is_for_ribbon = false;
     int toggle_counter = 0;
-    const int filt_reset_thresh = ribbon_max_val + max(1,(RIBBON_SPAN - ribbon_max_val)/6);
+    //const int filt_reset_thresh = ribbon_max_val + max(1,(RIBBON_SPAN - ribbon_max_val)/6);
     int ribbonPin = A0;
+    int ribbonRefPin = A1;
 
-    void setup_ribbon(int ribPin, keybed_base_t *keybed);
+    void setup_ribbon(int ribPin, int ribRefPin, keybed_base_t *keybed);
     void service_ribbon(const unsigned long &cur_millis);
     float read_ribbon(void);
     float process_ribbon(float);
@@ -47,12 +54,32 @@ class Ribbon {
 };
     
   
-void Ribbon::setup_ribbon(int ribPin, keybed_base_t *keybed) {
+void Ribbon::setup_ribbon(int ribPin, int ribRefPin, keybed_base_t *keybed) {
+  //set the analog read pins
   ribbonPin = ribPin;
+  ribbonRefPin = ribRefPin;
   pinMode(ribbonPin, INPUT_PULLUP);
+  pinMode(ribbonRefPin, INPUT_PULLUP);
+  analogReference(EXTERNAL);  //output of ribbonRefPin (pullup ~35K?) through 20K to ground.  Does this pin also have ~35K to ground?
+  //analogReference(INTERNAL2V56);
+  
   //set scaling for ribbon
-  R_pullup_A3_kOhm = R_ribbon_max_kOhm * ( ((float)RIBBON_SPAN) / ((float)ribbon_max_val) - 1.0 );
-  R_ribbon_min_kOhm = ((float)ribbon_min_val) / ((float)ribbon_max_val) * R_ribbon_max_kOhm;
+  //R_pullup_A3_kOhm = R_ribbon_max_kOhm * ( ((float)RIBBON_SPAN) / ((float)ribbon_max_val) - 1.0 );
+  //R_ribbon_min_kOhm = ((float)ribbon_min_val) / ((float)ribbon_max_val) * R_ribbon_max_kOhm;
+  ribbon_max_val_scaled = ((float)ribbon_max_val)/((float)RIBBON_SPAN);
+  ribbon_min_val_scaled = ((float)ribbon_min_val)/((float)RIBBON_SPAN);
+  Vin_Vref = (R_ribbon_max_kOhm - R_ribbon_min_kOhm) /( (R_ribbon_max_kOhm/ribbon_max_val_scaled) - (R_ribbon_min_kOhm/ribbon_min_val_scaled) );
+  R_pullup_A3_kOhm = -R_ribbon_max_kOhm + Vin_Vref*(R_ribbon_max_kOhm/ribbon_max_val_scaled);
+  Vin_Vref_SPAN = Vin_Vref * ((float)RIBBON_SPAN);
+
+//  delay(1000);
+//  Serial.print("Ribbon: setup_ribon: ribbon_max_val_scaled = "); Serial.println(ribbon_max_val_scaled);
+//  Serial.print("Ribbon: setup_ribon: ribbon_min_val_scaled = "); Serial.println(ribbon_min_val_scaled);
+//  Serial.print("Ribbon: setup_ribon: Vin_Vref = "); Serial.println(Vin_Vref);
+//  Serial.print("Ribbon: setup_ribon: R_pullup_A3_kOhm = "); Serial.println(R_pullup_A3_kOhm);
+//  Serial.print("Ribbon: setup_ribon: Vin_Vref_SPAN = "); Serial.println(Vin_Vref_SPAN);  
+  
+  //set keybed to which we will transmit keypresses
   thisKeybed = keybed;
 }
 
@@ -113,7 +140,7 @@ void Ribbon::service_ribbon(const unsigned long &cur_millis = 0) {
   if (was_note_on == false) {
     if (is_note_on == true) {
       //note starting
-      keybed_voice_ind = thisKeybed->addKeyPress(((int)note_num_float+0.5),RIB_NOTE_ON_VEL);
+      keybed_voice_ind = thisKeybed->addKeyPress(note_num_float,RIB_NOTE_ON_VEL);
     } else {
       //not is still off.  do nothing.
     }
@@ -121,7 +148,7 @@ void Ribbon::service_ribbon(const unsigned long &cur_millis = 0) {
     // note has been on
     if (is_note_on == true) {
       //note is sustaining...update its ptich
-      if (keybed_voice_ind >= 0) (thisKeybed->getKeybedDataP(keybed_voice_ind))->noteNum = ((int)(note_num_float+0.5));
+      if (keybed_voice_ind >= 0) (thisKeybed->getKeybedDataP(keybed_voice_ind))->setNoteNum(note_num_float);
     } else {
       // note was on but is now off...stop the note
       thisKeybed->stopKeyPressByInd(keybed_voice_ind,RIB_NOTE_OFF_VEL);
@@ -139,13 +166,6 @@ float Ribbon::read_ribbon(void) {
   //if (drivePin_state == LOW) ribbon_value_float = RIBBON_SPAN - ribbon_value_float;
 
 
-//  //invert the drive pin
-//  toggle_counter++;
-//  if (toggle_counter >= 1) {
-//    toggle_counter = 0;
-//    drivePin_state = !drivePin_state;
-//    digitalWrite(drivePin,drivePin_state);    
-//  }
   
 //  //if the ribbon value is above some limit (ie, not being touched), don't apply the filters.  
 //  //This is to prevent the internal filter states getting spun up onto these non-real values.  
@@ -176,25 +196,6 @@ float Ribbon::read_ribbon(void) {
 //  }
 //  prev_raw_ribbon_value = raw_ribbon_value;
 
-/*
- * 
-  //print some debugging info
-  if (PRINT_RAW_RIBBON_VALUE) {
-    if (flag_cannot_keep_up) {
-      Serial.print(-ribbon_value); //enable this to get value at top and bottom of ribbon to calibrate
-    } else {
-      Serial.print(ribbon_value); //enable this to get value at top and bottom of ribbon to calibrate
-    }
-    Serial.print(", "); //enable this to get value at top and bottom of ribbon to calibrate
-    Serial.print((int)ribbon_value_float); //enable this to get value at top and bottom of ribbon to calibrate
-    //Serial.print(compare_value); //enable this to get value at top and bottom of ribbon to calibrate
-    Serial.println();
-    flag_cannot_keep_up = false;
-  }
-  */
-
-  //save for next time
-  //prev_raw_ribbon_value = raw_ribbon_value;
 
   return ribbon_value_float;
 }
@@ -214,19 +215,40 @@ float Ribbon::process_ribbon(float ribbon_value_float) {
   ribbon_value_float = filt_ribbon_value_float;
 
   //process ribbon value
-  float foo_float = 1.0 / (((float)RIBBON_SPAN) / ribbon_value_float - 1.0);
-  float ribbon_frac = (R_pullup_A3_kOhm / R_ribbon_max_kOhm) * foo_float;
-  float ribbon_R_kOhm = R_pullup_A3_kOhm * foo_float;
-  float ribbon_span_frac = (ribbon_R_kOhm - R_ribbon_min_kOhm) / (R_ribbon_max_kOhm - R_ribbon_min_kOhm);
-  ribbon_span_frac = max(0.0, ribbon_span_frac);
-  float note_num_float = ribbon_span_frac * (ribbon_span_half_steps_float + ribbon_span_extra_half_steps_float);
-  note_num_float = note_num_float - ribbon_span_extra_half_steps_float/2.0;
+  float note_num_float=0.0;
+  #if 0
+    //variable resistor below fixed resistor
+    float foo_float = 1.0f / (((float)RIBBON_SPAN) / ribbon_value_float - 1.0f);
+    float ribbon_frac = (R_pullup_A3_kOhm / R_ribbon_max_kOhm) * foo_float;
+    float ribbon_R_kOhm = R_pullup_A3_kOhm * foo_float;
+    float ribbon_span_frac = (ribbon_R_kOhm - R_ribbon_min_kOhm) / (R_ribbon_max_kOhm - R_ribbon_min_kOhm);
+    //ribbon_span_frac = max(0.0, ribbon_span_frac);
+    note_num_float = ribbon_span_frac * (ribbon_span_half_steps_float + ribbon_span_extra_half_steps_float);
+    note_num_float = note_num_float - ribbon_span_extra_half_steps_float/2.0;
+  #else
+
+    #if 1
+      //basic linear interpolation
+      note_num_float = (ribbon_value_float - ribbon_min_val)/(ribbon_max_val - ribbon_min_val)*(ribbon_span_half_steps_float+ribbon_span_extra_half_steps_float);
+      note_num_float -= (0.5f*ribbon_span_extra_half_steps_float); //shift over a smidge
+    #else   
+      //new resistor network method
+      //float ribbon_value_scaled = ribbon_value_float / ((float)RIBBON_SPAN);
+      //float foo_denom = Vin_Vref / ribbon_value_scaled - 1.0f;
+      float foo_denom = Vin_Vref_SPAN / ribbon_value_float - 1.0f;
+      float R_kOhm = R_pullup_A3_kOhm / foo_denom;
+      note_num_float = (R_kOhm - R_ribbon_min_kOhm) / (R_ribbon_max_kOhm + R_ribbon_min_kOhm); //should span 0.0 to 1.0
+      note_num_float *= (ribbon_span_half_steps_float + ribbon_span_extra_half_steps_float);  //scale up to full length of the ribbon (half steps)
+      note_num_float -= (0.5f*ribbon_span_extra_half_steps_float); //shift over a smidge
+    #endif
+  #endif
 
   //apply a calibration (of sorts) to better linearize the response
   if (1) { 
-    #define N_CAL 8
-    float input_vals[N_CAL] = {-0.11, 0.3, 1.20, 2.2,  3.0, 10.53, 22.93, 35.9}; //calibraiton table...input values measured from ribbon
-    float output_vals[N_CAL] = {0.0,  1.0, 2.0,  3.0,  4.0, 12.0,  24.0, 36.0};    //calibraiton table...output values desired for the input values above
+    #define N_CAL 12
+    //float input_vals[N_CAL] = {-0.11, 0.58, 1.41, 2.45, 3.28, 10.57, 22.74, 35.9}; //calibraiton table...input values measured from ribbon
+    float input_vals[N_CAL] =  {0.0, 1.02, 2.4, 3.8, 4.81, 8.55, 13.93, 19.31, 25.9, 30.35, 35.1, 35.9}; //calibraiton table...input values measured from ribbon
+    float output_vals[N_CAL] = {0.0, 1.0, 2.0,  3.0, 4.0,  7.0,  12.0,  17.0,  24.0,  29.0, 35.0, 36.0};    //calibraiton table...output values desired for the input values above
 
     if (PRINT_CAL_TEXT) {
       if ((note_num_float > -10.0) & (note_num_float < 38.0)) {
@@ -271,37 +293,6 @@ float Ribbon::process_ribbon(float ribbon_value_float) {
 
     
   }
-
-
-  /* Process to get the note num + bend (as for issuing a MIDI command)
-  note_num = ((int)(note_num_float + 0.5)); //round
-
-  //look for special case...decide to change note or just bend a lot
-  closest_note_num = note_num;
-  if (0) {
-    //add some hysteresis to prevent fluttering between two notes
-    //if you keep you finger on the line between them
-    if (abs(note_num - prev_note_num) == 1) {  //is it a neighboring note?
-      if (note_num > prev_note_num) {
-        note_num = ((int)(note_num_float + 0.35)); //need extra to get up to next note
-      } else if (note_num < prev_note_num) {
-        note_num = ((int)(note_num_float + 0.65)); //next extra to get down to next note
-      }
-    }
-  } else {
-    //if it can bend the note, just let it bend the note
-    if ( ((prev_is_note_on==true) && (abs(note_num_float - ((float)prev_note_num)) < (synth_bend_half_steps-0.5))) ||  //bend if we can
-         ((prev_is_note_on==false) && (abs(note_num - prev_note_num) < min(2,synth_bend_half_steps))) ) { //if new note, only bend if we're off by one note
-      //don't change note, step back to original note...the rest of the code will just bend more
-      note_num = prev_note_num;
-    }
-  }
-  */
-
-/*
-  //calc the desired brightness CC value (as a value of 0.0 to 1.0)
-  brightness_frac = min(1.0,max(0.0,note_num_float / ribbon_span_half_steps_float));
-  */
 
   return note_num_float;
 }
