@@ -26,12 +26,12 @@
 void initChordMemState(void)
 {
   for (int i=0;i<N_POLY;i++) {
-    chordMemState.noteShift[i]=0;
+    chordMemState.noteShift_x16bits[i]=0;
     chordMemState.isNoteActive[i]=OFF;
     chordMemState.detuneFactor[i]=0;
   }
   chordMemState.isNoteActive[0]=ON; //make one note active
-  chordMemState.noteShift[0]=0;
+  chordMemState.noteShift_x16bits[0]=0;
   chordMemState.voiceIndexOfBase = 0; //assume first voice is the one currently allocated as the base of the chord mem
 }
 
@@ -763,7 +763,8 @@ void deactivateChordMemory(void)
     for (int i=0;i<N_POLY;i++) {
       if (chordMemState.isNoteActive[i]==HIGH) {
         //allKeybedData[i].noteNum = allVoiceData[i].noteNum;
-        (trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+        //(trueKeybed.getKeybedDataP(i))->noteNum = allVoiceData[i].noteNum;
+        (trueKeybed.getKeybedDataP(i))->setNoteNum(allVoiceData[i].targNoteNum_x16bits);
         (trueKeybed.getKeybedDataP(i))->noteVel = allVoiceData[i].noteVel;
         (trueKeybed.getKeybedDataP(i))->isNewVelocity = 1;
       }
@@ -803,14 +804,14 @@ void setChordMemState(void)
 
   //find lowest active note and note index in the keybed data
   int lowestKeyInd = 0; //initialize
-  int lowestNoteNum = 1000;  //initialize
+  long int lowestNoteNum_x16bits = (1000L << 16);  //initialize to something stupidly large
   boolean anyNoteFound = false;
   for (int Ikey=0;Ikey<N_KEY_PRESS_DATA;Ikey++) {     
     if (trueKeybed.isGateActive(Ikey) == ON) {     
       keyPress = trueKeybed.getKeybedDataP(Ikey);
-      if (keyPress->noteNum < lowestNoteNum) {
+      if (keyPress->targNoteNum_x16bits < lowestNoteNum_x16bits) {
         lowestKeyInd = Ikey;
-        lowestNoteNum = keyPress->noteNum;
+        lowestNoteNum_x16bits = keyPress->targNoteNum_x16bits;
         anyNoteFound=true;
       }
     }
@@ -824,12 +825,15 @@ void setChordMemState(void)
   chordMemState.voiceIndexOfBase = lowestKeyInd;
 
   //set the state of each voice relative to the lowest note
-  static int noteShift = 0;
+  //static int noteShift = 0;
+  long int noteShift_x16bits = 0;
   for (int Ivoice=0;Ivoice<N_POLY;Ivoice++) {
     keyPress = trueKeybed.getKeybedDataP(Ivoice);
-    noteShift = keyPress->noteNum - lowestNoteNum;
-    noteShift = constrain(noteShift,0,119);
-    chordMemState.noteShift[Ivoice]=noteShift;
+    //noteShift = keyPress->noteNum - lowestNoteNum;
+    //noteShift = constrain(noteShift,0,119);
+    noteShift_x16bits = keyPress->targNoteNum_x16bits - lowestNoteNum_x16bits;
+    noteShift_x16bits = constrain(noteShift_x16bits,0, (119L << 16));
+    chordMemState.noteShift_x16bits[Ivoice]=noteShift_x16bits;
     chordMemState.isNoteActive[Ivoice] = trueKeybed.isGateActive(Ivoice);
     //chordMemState.isNoteActive[Ivoice] = isGateActive(allKeybedData[Ivoice]);
   }
@@ -845,7 +849,7 @@ void setChordMemState(void)
   if (DEBUG_TO_SERIAL & DEBUG_THIS_FILE) {
     Serial.print(F("setChordMemState: Shift: "));
     for (int i=0;i<N_POLY;i++) {
-      Serial.print(chordMemState.noteShift[i]);
+      Serial.print(chordMemState.noteShift_x16bits[i] >> 16);
       Serial.print(" ");
       delayMicroseconds(20);
     }
@@ -882,8 +886,8 @@ void setDetuneFactorsForChordMemory(void) {
       boolean isUnison = true;
       for (int i=0; i<N_POLY; i++) { 
         if (chordMemState.isNoteActive[i]==true) { 
-          if ((chordMemState.noteShift[i] % 12) != 0) isOctaves = false;
-          if (chordMemState.noteShift[i] != 0) isUnison = false;
+          if ( (((int)(chordMemState.noteShift_x16bits[i] >> 16)) % 12) != 0 ) isOctaves = false;
+          if (chordMemState.noteShift_x16bits[i] != 0) isUnison = false;
         }
       }
       if (isUnison) {
@@ -950,9 +954,9 @@ int checkAndApplyMonoPolyOctaveDetune(void) {
   int nRoot = 0, nOctave = 0;
   for (int i=0; i<N_POLY; i++) {
     if (chordMemState.isNoteActive[i]==true) {
-      if (chordMemState.noteShift[i] == 0) nRoot++;
-      if (chordMemState.noteShift[i] == 12) nOctave++;
-      if ((chordMemState.noteShift[i] != 0) & ((chordMemState.noteShift[i] != 12))) isMonoPolyOctaves=false;
+      if (chordMemState.noteShift_x16bits[i] == 0) nRoot++;
+      if (chordMemState.noteShift_x16bits[i] == (12L << 16)) nOctave++;
+      if ((chordMemState.noteShift_x16bits[i] != 0) & ((chordMemState.noteShift_x16bits[i] != (12L << 16)))) isMonoPolyOctaves=false;
     }
   }
   if (!((nRoot==2) & (nOctave==2))) isMonoPolyOctaves=false;
@@ -961,7 +965,7 @@ int checkAndApplyMonoPolyOctaveDetune(void) {
     int curRootCount=0,curCountOctave = 0;
     for (int i=0; i<N_POLY; i++) {
       if (chordMemState.isNoteActive[i]==true) {
-        if (chordMemState.noteShift[i] == 0) {
+        if (chordMemState.noteShift_x16bits[i] == 0) {
           //chordMemState.detuneFactor[i] = 0; //don't detune the roots
           curRootCount++;
           if ((curRootCount % 2) == 0) {
@@ -970,7 +974,7 @@ int checkAndApplyMonoPolyOctaveDetune(void) {
             chordMemState.detuneFactor[i] = 0; //no detune
           }
         }
-        if (chordMemState.noteShift[i] == 12) {
+        if (chordMemState.noteShift_x16bits[i] == (12L << 16)) {
           curCountOctave++;
           if ((curCountOctave % 2) == 1) {
             chordMemState.detuneFactor[i] = 1;  //positive is down in pitch

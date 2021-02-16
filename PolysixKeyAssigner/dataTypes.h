@@ -104,7 +104,7 @@ class keyPressData_t {
       }
     };
     void reset(void) {
-      noteNum = 0;  noteVel = 0;  isPressed = OFF;  isHeld = OFF; isLatched = OFF;
+      setNoteNum(0);  noteVel = 0;  isPressed = OFF;  isHeld = OFF; isLatched = OFF;
       start_millis = 0;  end_millis = 0;  forceRetrigger = true; isNewVelocity = OFF;
     };
     int setNoteNum(float noteNum_float) {
@@ -117,6 +117,11 @@ class keyPressData_t {
       targNoteNum_x16bits = ((long)_noteNum) << 16; //left shift by 16 bits and convert to long int
       return noteNum;
     }
+    int setNoteNum(long int _noteNum_x16bits) {
+      noteNum = (int)(_noteNum_x16bits >> 16);
+      targNoteNum_x16bits = _noteNum_x16bits;
+      return noteNum;
+    }
 //    void copyFrom(const keyPressData_t &input) {
 //      noteNum = input.noteNum;      noteVel = input.noteVel;      isPressed = input.isPressed;      isHeld = input.isHeld;
 //      start_millis = input.start_millis;      end_millis = input.end_millis;      forceRetrigger = input.forceRetrigger;
@@ -126,20 +131,38 @@ class keyPressData_t {
 
 
 //data structure defining what's happening in a voice
-typedef struct {
-  int keyPressID;  //index into keypress array
-  int noteNum; //target note number
-  long int targNoteNum_x16bits;    //target pitch of note, higher resolution (to handle in-between pitches from ribbon, for example)
-  int32_t curNoteNum_x16bits; //current pitch of note (might not match the target pitch due to portamento, for instance)
-  int32_t curAttackDetuneFac_x16bits;
-  int noteVel;
-  //unsigned int noteReleaseVel;
-  int noteGate;  //high or low
-  millis_t start_millis; //when the note on the voice is started
-  millis_t end_millis;   //when the note on the voice is ended
-  int forceRetrigger;
-  int isNewVelocity;
-} voiceData_t;
+//typedef struct {
+class voiceData_t {
+  public:
+    int keyPressID;  //index into keypress array
+    int noteNum; //target note number
+    long int targNoteNum_x16bits;    //target pitch of note, higher resolution (to handle in-between pitches from ribbon, for example)
+    int32_t curNoteNum_x16bits; //current pitch of note (might not match the target pitch due to portamento, for instance)
+    int32_t curAttackDetuneFac_x16bits;
+    int noteVel;
+    //unsigned int noteReleaseVel;
+    int noteGate;  //high or low
+    millis_t start_millis; //when the note on the voice is started
+    millis_t end_millis;   //when the note on the voice is ended
+    int forceRetrigger;
+    int isNewVelocity;
+
+    int setNoteNum(int _noteNum) {
+      noteNum = _noteNum;
+      targNoteNum_x16bits = ((long)_noteNum) << 16; //left shift by 16 bits and convert to long int
+      return noteNum;
+    }
+    int setNoteNum(float noteNum_float) {
+      noteNum = (int)(noteNum_float+0.5f);
+      targNoteNum_x16bits = (long int)((noteNum_float * (65536.0f))+0.5f); //left shift by 16 bits and convert to long int
+      return noteNum;
+    }
+    int setNoteNum(long int _noteNum_x16bits) {
+      noteNum = (int)(_noteNum_x16bits >> 16);
+      targNoteNum_x16bits = _noteNum_x16bits;
+      return noteNum;
+    }
+};
 
 
 
@@ -312,7 +335,7 @@ class assignerButtonState2_t {
 };
 
 typedef struct {
-  int noteShift[N_POLY];
+  long int noteShift_x16bits[N_POLY];
   int isNoteActive[N_POLY];
   int voiceIndexOfBase;
   int detuneFactor[N_POLY];

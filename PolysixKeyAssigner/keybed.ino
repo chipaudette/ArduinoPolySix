@@ -24,7 +24,8 @@ void keybed_t::resetKeyPress(const int &noteIndex)
     //allNotes[noteIndex].noteID = 0;
     int noteNum = allKeybedData[noteIndex].noteNum; //do I really need to keep the noteNum when resetting?
     allKeybedData[noteIndex].reset();
-    allKeybedData[noteIndex].noteNum = noteNum;
+    //allKeybedData[noteIndex].noteNum = noteNum;
+    allKeybedData[noteIndex].setNoteNum(allKeybedData[noteIndex].targNoteNum_x16bits);
   }
 }
 
@@ -449,9 +450,10 @@ void keybed_givenlist_t::resetKeyPress(const int &noteIndex)
   int n = getMaxKeySlots();
   if (noteIndex < n) {
     //allNotes[noteIndex].noteID = 0;
-    int noteNum = allKeybedData[noteIndex].noteNum; //do I really need to keep the noteNum when resetting?
+    //int noteNum = allKeybedData[noteIndex].noteNum; //do I really need to keep the noteNum when resetting?
     allKeybedData[noteIndex].reset();
-    allKeybedData[noteIndex].noteNum = noteNum;
+    //allKeybedData[noteIndex].noteNum = noteNum;
+    allKeybedData[noteIndex].setNoteNum(allKeybedData[noteIndex].targNoteNum_x16bits);
   }
 }
 
