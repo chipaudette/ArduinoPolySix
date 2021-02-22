@@ -45,10 +45,10 @@ void keybed_t::set_nKeyPressSlots(const int &newVal)
   nKeyPressSlots = val;   
 }
 
-int keybed_t::addKeyPress(const int &noteNum,const int &noteVel) {
-  return addKeyPress((float)noteNum, noteVel);
+int keybed_t::addKeyPress(const int &noteNum,const int &noteVel, const bool &isRibbon) {
+  return addKeyPress((float)noteNum, noteVel, isRibbon);
 }
-int keybed_t::addKeyPress(const float &noteNum_float,const int &noteVel) {
+int keybed_t::addKeyPress(const float &noteNum_float,const int &noteVel, const bool &isRibbon) {
   int ind;
   
   //Serial.print("keybed.addKeyPress: nKeyPressSlots = ");
@@ -76,7 +76,7 @@ int keybed_t::addKeyPress(const float &noteNum_float,const int &noteVel) {
   
   //create this note
   resetKeyPress(ind);
-  createKeyPress(ind,noteNum_float,noteVel);
+  createKeyPress(ind,noteNum_float,noteVel,isRibbon);
 
   //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
   return ind;
@@ -141,35 +141,37 @@ int keybed_t::getNewestKeyPress(void) {
   return newest_ind;
 }
 
-int keybed_t::get2ndNewestKeyPress(void) {
+int keybed_t::get2ndNewestKeyPressNotRibbon(void) {
   int newest_ind = 0;
   int newest2_ind = 0;
   millis_t newest_millis = 0;
   millis_t newest2_millis = 0;
   
   for (int i=0; i < nKeyPressSlots; i++) {
-    if (allKeybedData[i].start_millis > newest_millis) {
-      //save previous newest
-      if (newest_millis > newest2_millis) {  //this should always be the case, but I'll check, just to make sure
-        newest2_millis=newest_millis;
-        newest2_ind = newest_ind;
+    if (allKeybedData[i].isRibbon == false) {
+      if (allKeybedData[i].start_millis > newest_millis) {
+        //save previous newest
+        if (newest_millis > newest2_millis) {  //this should always be the case, but I'll check, just to make sure
+          newest2_millis=newest_millis;
+          newest2_ind = newest_ind;
+        }
+        
+        //save latest newest
+        newest_millis = allKeybedData[i].start_millis;
+        newest_ind = i;
+      } else if (allKeybedData[i].start_millis > newest2_millis) {
+        //save this one
+        newest2_millis = allKeybedData[i].start_millis;
+        newest2_ind = i;
+      } else {
+        //do nothing
       }
-      
-      //save latest newest
-      newest_millis = allKeybedData[i].start_millis;
-      newest_ind = i;
-    } else if (allKeybedData[i].start_millis > newest2_millis) {
-      //save this one
-      newest2_millis = allKeybedData[i].start_millis;
-      newest2_ind = i;
-    } else {
-      //do nothing
     }
   }
   return newest2_ind;
 }
 
-void keybed_t::createKeyPress(const int &ind, const float &noteNum_float, const int &noteVel) {
+void keybed_t::createKeyPress(const int &ind, const float &noteNum_float, const int &noteVel, const bool &isRibbon) {
   //static float fooFreq;
   //static unsigned long foo_dPhase;
 
@@ -177,6 +179,7 @@ void keybed_t::createKeyPress(const int &ind, const float &noteNum_float, const 
   allKeybedData[ind].setNoteNum(noteNum_float);
   allKeybedData[ind].noteVel = noteVel;
   allKeybedData[ind].isNewVelocity = true;
+  allKeybedData[ind].isRibbon = isRibbon;
   allKeybedData[ind].isPressed = ON;
   allKeybedData[ind].isHeld = OFF;
   if (isHoldNewNote()) allKeybedData[ind].isHeld = ON;
@@ -184,6 +187,7 @@ void keybed_t::createKeyPress(const int &ind, const float &noteNum_float, const 
   allKeybedData[ind].end_millis = allKeybedData[ind].start_millis;
 }  
 
+#define INCLUDE_PRINT 0
 void keybed_t::stopKeyPress(const int &noteNum,const int &noteVel) {
   int ind=0;
   
@@ -193,7 +197,8 @@ void keybed_t::stopKeyPress(const int &noteNum,const int &noteVel) {
   } else {
     //find any and all matching noteNum and stop them all
     for (ind = 0; ind < maxNKeyPressSlots; ind++) {
-      if (allKeybedData[ind].noteNum == noteNum) {
+      //if (allKeybedData[ind].noteNum == noteNum) {
+      if ((allKeybedData[ind].noteNum == noteNum) && (allKeybedData[ind].isRibbon == 0)) {
         stopKeyPressByInd(ind,noteVel);
       }
     }
@@ -222,7 +227,7 @@ void keybed_t::stopAllKeyPresses(void) {
 }
 
 void keybed_t::printKeyPressState(void) {
-  Serial.print("KeyPresses: ");
+  Serial.print(F("KeyPresses: "));
   for (int ind=0; ind < maxNKeyPressSlots; ind++) {
     Serial.print(ind);
     Serial.print("=");
@@ -457,29 +462,30 @@ void keybed_givenlist_t::resetKeyPress(const int &noteIndex)
   }
 }
 
-int keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel) {
-  return addKeyPress((float)noteNum,noteVel);
+int keybed_givenlist_t::addKeyPress(const int &noteNum,const int &noteVel, const bool &isRibbon) {
+  return addKeyPress((float)noteNum, noteVel, isRibbon);
 }
 
-int keybed_givenlist_t::addKeyPress(const float &noteNum_float,const int &noteVel) {
+int keybed_givenlist_t::addKeyPress(const float &noteNum_float,const int &noteVel, const bool &isRibbon) {
   int ind = next_ind;
   incrementNextInd();
   
   //create this note
   resetKeyPress(ind);
-  createKeyPress(ind,noteNum_float,noteVel);
+  createKeyPress(ind, noteNum_float, noteVel, isRibbon);
 
   //Serial.print("keybed::addKeyPress: vel = "); Serial.print(noteVel); Serial.print(", remapped: "); Serial.println(remapVelocityValues(noteVel,assignerState.velocity_sens_8bit));
   return ind;
 }
 
-void keybed_givenlist_t::createKeyPress(const int &ind, const float &noteNum_float, const int &noteVel) {
+void keybed_givenlist_t::createKeyPress(const int &ind, const float &noteNum_float, const int &noteVel, const bool &isRibbon) {
   //static float fooFreq;
   //static unsigned long foo_dPhase;
   
   //allKeybedData[ind].noteNum = noteNum;
   allKeybedData[ind].setNoteNum(noteNum_float);
   allKeybedData[ind].noteVel = noteVel;
+  allKeybedData[ind].isRibbon = isRibbon;
   allKeybedData[ind].isNewVelocity = true;
   allKeybedData[ind].isPressed = ON;
   allKeybedData[ind].isHeld = OFF;
@@ -504,7 +510,8 @@ void keybed_givenlist_t::stopKeyPress(const int &noteNum,const int &noteVel) {
   } else {
     //find any and all matching noteNum and stop them all
     for (ind = 0; ind < maxNKeyPressSlots; ind++) {
-      if (allKeybedData[ind].noteNum == noteNum) {
+      //if (allKeybedData[ind].noteNum == noteNum) {
+      if ((allKeybedData[ind].noteNum == noteNum) && (allKeybedData[ind].isRibbon == false)) {
         stopKeyPressByInd(ind,noteVel);
       }
     }

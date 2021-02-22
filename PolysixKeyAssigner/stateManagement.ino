@@ -375,7 +375,7 @@ void updateArpOnOffAndParameters(assignerButtonState2_t &cur_but_state)
       //let's try to run the arpeggiator
       if (assignerState.arp == ON) {
         //start arpeggiator
-        Serial.print(F("updateArpOnOffState: Arp On. Hold = "));Serial.print(assignerState.hold);Serial.print(", latch = ");Serial.println(assignerState.arp_params.arp_latch);
+        Serial.print(F("updateArpOnOffState: Arp On. Hold = "));Serial.print(assignerState.hold);Serial.print(F(", latch = "));Serial.println(assignerState.arp_params.arp_latch);
         int mode = ARP_SORTMODE_NOTENUM;
         if (assignerState.hold == ON) {
           if (assignerState.arp_params.arp_latch == OFF) {
@@ -585,20 +585,21 @@ void activateHoldState(void) {
 void activateHoldState(boolean enableHoldState) {
   keyPressData_t *keyPress;
 
-  //Serial.println("stateManagement: activate hold...");
-
-  //loop over each key and activate hold...flip the isHeld to ON
-  for (int i; i < trueKeybed.getMaxKeySlots(); i++) {
-    //if (allKeybedData[i].isPressed==ON) allKeybedData[i].isHeld=ON;
-    keyPress = trueKeybed.getKeybedDataP(i);
-    if (keyPress->isPressed==ON) keyPress->isHeld=ON;
-  }
-
-
-  //loop over each key and activate hold...flip the isHeld to ON
-  for (int i; i < trueKeybed_givenList.getMaxKeySlots(); i++) {
-    keyPress = trueKeybed_givenList.getKeybedDataP(i);
-    if (keyPress->isPressed==ON) keyPress->isHeld=ON;
+  Serial.print(F("stateManagement: activate hold..."));Serial.println(enableHoldState);
+  
+  if (enableHoldState) { //added Feb 20, 2021
+    //loop over each key and activate hold...flip the isHeld to ON
+    for (int i; i < trueKeybed.getMaxKeySlots(); i++) {
+      //if (allKeybedData[i].isPressed==ON) allKeybedData[i].isHeld=ON;
+      keyPress = trueKeybed.getKeybedDataP(i);
+      if (keyPress->isPressed==ON) keyPress->isHeld=ON;
+    }
+  
+    //loop over each key and activate hold...flip the isHeld to ON
+    for (int i; i < trueKeybed_givenList.getMaxKeySlots(); i++) {
+      keyPress = trueKeybed_givenList.getKeybedDataP(i);
+      if (keyPress->isPressed==ON) keyPress->isHeld=ON;
+    }
   }
 
   //activate the global hold state
@@ -607,7 +608,7 @@ void activateHoldState(boolean enableHoldState) {
 
 void deactivateHoldState(void) {
 
-  //Serial.println("stateManagement: de-activate hold.");
+  Serial.println(F("stateManagement: deactivate hold."));
 
   //change the assigner state
   assignerState.hold = HOLD_STATE_OFF;

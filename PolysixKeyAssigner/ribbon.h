@@ -18,7 +18,7 @@
 
 class Ribbon {
   public:
-    Ribbon(void) { }
+    Ribbon(void) { setCalToDefaultPlusAdjustment(); }
     
     //int ribbon_max_val = 339,ribbon_min_val = 13; //for my Arduino UNO
     //int ribbon_max_val = 520,ribbon_min_val = 22; //for my Arduino UNO, External 3.3V ref
@@ -46,6 +46,25 @@ class Ribbon {
     float read_ribbon(void);
     float process_ribbon(float);
     int prev_raw_ribbon_value = 0;
+
+    #define N_CAL 12
+    float default_cal_input_vals[N_CAL] = {0.0, 1.02, 2.4, 3.8, 4.81, 8.55, 13.93, 19.31, 25.9, 30.35, 35.1, 35.9};
+    float cal_output_vals[N_CAL] = {0.0, 1.0, 2.0,  3.0, 4.0,  7.0,  12.0,  17.0,  24.0,  29.0, 35.0, 36.0};    //calibraiton table...output values desired for the input values above
+    float cal_input_vals[N_CAL];
+    #define N_ADJUST_CAL 2
+    float cal_adjust[N_ADJUST_CAL] = {0.0, 0.0}; //adjustment to cal. Low end of ribbon and high end of ribbon.  Negative values lowers the pitch
+    void setCalToDefaultPlusAdjustment(void) {
+      for (int i=0; i<N_CAL; i++) { 
+        cal_input_vals[i] = default_cal_input_vals[i]; //default value for the calibration
+
+        //now, adjust the calibration by the two-point adjustment
+        float cur_val = cal_input_vals[i];
+        float fracOfSpan = (cur_val - default_cal_input_vals[0])/(default_cal_input_vals[N_CAL-1]-default_cal_input_vals[0]);
+        float adjustment = fracOfSpan * (cal_adjust[1]-cal_adjust[0]) + cal_adjust[0];
+        cal_input_vals[i] -= adjustment;
+      }      
+    }
+
   private:
     bool is_note_on = false;
     int keybed_voice_ind = -1;
@@ -97,7 +116,7 @@ void Ribbon::service_ribbon(const unsigned long &cur_millis = 0) {
     call_count++;
     if (call_count == 200) {
       float samples_per_second = ((float)call_count)/((float)(cur_millis - start_millis))*1000.0f;
-      Serial.print("Ribbon: service_ribbon: service_ribbon: ave ribbon sample (Hz) = ");
+      Serial.print(F("Ribbon: service_ribbon: service_ribbon: ave ribbon sample (Hz) = "));
       Serial.println(samples_per_second);
 
       //reset for next count
@@ -114,7 +133,7 @@ void Ribbon::service_ribbon(const unsigned long &cur_millis = 0) {
 
   //is a note active
   bool was_note_on = is_note_on;
-  is_note_on = (((int)rib_value_float) < (ribbon_max_val + 10));  //it is on if the value is withinthe allowed range of th ribbon
+  is_note_on = (((int)rib_value_float) < (ribbon_max_val + 10));  //it is on if the value is within the allowed range of th ribbon
   if (is_note_on) note_num_float = process_ribbon(rib_value_float);
 
   //add in any offset
@@ -122,14 +141,14 @@ void Ribbon::service_ribbon(const unsigned long &cur_millis = 0) {
 
   #if (DEBUG_RIBBON)
     if ((is_note_on) && (call_count % 5 == 0)) {
-      Serial.print("Ribbon: service_ribbon: rib_value_float = ");
+      Serial.print(F("Ribbon: service_ribbon: rib_value_float = "));
       Serial.print(rib_value_float);
-      Serial.print(", was_note_on = ");
+      Serial.print(F(", was_note_on = "));
       Serial.print(was_note_on);
-      Serial.print(", is_note_on = ");
+      Serial.print(F(", is_note_on = "));
       Serial.print(is_note_on);
       if (is_note_on) {
-        Serial.print(", note_num_float = "); 
+        Serial.print(F(", note_num_float = ")); 
         Serial.print(note_num_float);
       }
       Serial.println();
@@ -140,7 +159,7 @@ void Ribbon::service_ribbon(const unsigned long &cur_millis = 0) {
   if (was_note_on == false) {
     if (is_note_on == true) {
       //note starting
-      keybed_voice_ind = thisKeybed->addKeyPress(note_num_float,RIB_NOTE_ON_VEL);
+      keybed_voice_ind = thisKeybed->addKeyPress(note_num_float,RIB_NOTE_ON_VEL,true);
     } else {
       //not is still off.  do nothing.
     }
@@ -200,6 +219,8 @@ float Ribbon::read_ribbon(void) {
   return ribbon_value_float;
 }
 float Ribbon::process_ribbon(float ribbon_value_float) {
+  static int count = 0;
+  bool printDebug = false;
 
   // filter if note is a legitimate value
   static float prev_ribbon_value_float = 0.0f;
@@ -245,53 +266,32 @@ float Ribbon::process_ribbon(float ribbon_value_float) {
 
   //apply a calibration (of sorts) to better linearize the response
   if (1) { 
-    #define N_CAL 12
-    //float input_vals[N_CAL] = {-0.11, 0.58, 1.41, 2.45, 3.28, 10.57, 22.74, 35.9}; //calibraiton table...input values measured from ribbon
-    float input_vals[N_CAL] =  {0.0, 1.02, 2.4, 3.8, 4.81, 8.55, 13.93, 19.31, 25.9, 30.35, 35.1, 35.9}; //calibraiton table...input values measured from ribbon
-    float output_vals[N_CAL] = {0.0, 1.0, 2.0,  3.0, 4.0,  7.0,  12.0,  17.0,  24.0,  29.0, 35.0, 36.0};    //calibraiton table...output values desired for the input values above
-
     if (PRINT_CAL_TEXT) {
-      if ((note_num_float > -10.0) & (note_num_float < 38.0)) {
-        Serial.print("Applying Cal: raw_ribbon_val = ");
-        Serial.print(ribbon_value_float);
-        Serial.print(", note_num_float = ");
-        Serial.print(note_num_float);
+      if ((note_num_float > -10.0) && (note_num_float < 38.0)) {
+        count++;
+        if (count >= 20) {
+          count = 0;
+          Serial.print(F("Applying Cal: raw_ribbon_val = "));
+          Serial.print(ribbon_value_float);
+          Serial.print(F(", note_num_float = "));
+          Serial.print(note_num_float);
+          printDebug = true;
+        }
       }
     }
 
     //search through calibration table and apply
     int iHigh = 1;
-    while ((iHigh < (N_CAL-1)) && (note_num_float > input_vals[iHigh])) {  iHigh++; }  
+    while ((iHigh < (N_CAL-1)) && (note_num_float > cal_input_vals[iHigh])) {  iHigh++; }  
     int iLow = iHigh-1;
-    note_num_float = (note_num_float - input_vals[iLow])/(input_vals[iHigh]-input_vals[iLow])*(output_vals[iHigh]-output_vals[iLow])+output_vals[iLow];
+    note_num_float = (note_num_float - cal_input_vals[iLow])/(cal_input_vals[iHigh]-cal_input_vals[iLow])*(cal_output_vals[iHigh]-cal_output_vals[iLow])+cal_output_vals[iLow];
 
-
-//    float bottom_transition = 1.5;
-//    float first_transition = 8.0;
-//    float second_transition = -2.0; //-10
-//    float third_transition = 1.0; //-5  
-    //float cal_amount = 1.0; // Uno
-//    float cal_amount = 1.0; // micro
-//    if (note_num_float > bottom_transition) {
-//      if (note_num_float < first_transition) {
-//        note_num_float += (cal_amount*((note_num_float-bottom_transition)/(first_transition-bottom_transition)));
-//      } else if (note_num_float < (ribbon_span_half_steps_float+second_transition)) {
-//        note_num_float += cal_amount;
-//      } else if (note_num_float < (ribbon_span_half_steps_float+third_transition)) {
-//        float foo = note_num_float - (ribbon_span_half_steps_float+second_transition); //how many above the transition
-//        float full_segment = -second_transition + third_transition; //positive number
-//        note_num_float += cal_amount*(1.0 - foo/full_segment);
-//      }
-//    }
-
-    if (PRINT_CAL_TEXT) {
+    if ((PRINT_CAL_TEXT) && (printDebug)) {
       if ((note_num_float > -10.0) & (note_num_float < ribbon_span_half_steps_float+2.0)) { 
-        Serial.print(", final note_num_float = ");
+        Serial.print(F(", final note_num_float = "));
         Serial.println(note_num_float);
       }
     }
-
-    
   }
 
   return note_num_float;

@@ -15,6 +15,7 @@ void initializeVoiceData(voiceData_t voiceData[], const int &N)
     voiceData[i].targNoteNum_x16bits = ((long)voiceData[i].noteNum) << 16;
     voiceData[i].noteVel = 0;
     voiceData[i].curNoteNum_x16bits = voiceData[i].noteNum << 16;
+    voiceData[i].isRibbon = false;
     voiceData[i].curAttackDetuneFac_x16bits = 0;
     voiceData[i].noteGate = LOW; //high or low
     voiceData[i].start_millis = 0; //when the note on the voice is started
@@ -499,9 +500,9 @@ void allocateVoiceForPoly(keybed_t *keybed)
     //    }
 
     //if the note is changing, update some backup information to help the portamento
-    if (isNoteChanging) { //is the note changing?
+    if ((isNoteChanging) && (allKeybedData[Ikey].isRibbon == false)) { //is the note changing?
       //for the polyphonic portamento, set the "previous" pitch of this voice to the previous note played by any voice
-      newInd = keybed->get2ndNewestKeyPress(); //find the previous note...this should probably search the VoiceData structure, not the keybed structure
+      newInd = keybed->get2ndNewestKeyPressNotRibbon(); //find the previous note...this should probably search the VoiceData structure, not the keybed structure
       if (newInd >= 0) { //if it is valid, proceed
         //allVoiceData[Ivoice].curNoteNum_x16bits = ((long)allKeybedData[newInd].noteNum) << 16;  //change the portamento behavior for Poly mode
 
@@ -529,13 +530,13 @@ void allocateVoiceForUnison(keybed_t *keybed)
   keybed->findNewestKeyPresses(nToFind, newestKeyInd);
 
   //is this a change in voice?
-  if ((allVoiceData[0].noteNum == keybedData[newestKeyInd[0]].noteNum) && (keybedData[0].isNewVelocity == false)) {
+  if ( ((allVoiceData[0].noteNum == keybedData[newestKeyInd[0]].noteNum) || (keybedData[0].isRibbon == true)) && (keybedData[0].isNewVelocity == false) ) {
     noteIsChanging = false;
   } else {
     noteIsChanging = true;
   }
 
-  //allocate voices
+  //allocate allvoices
   int newInd = 0;
   for (int Ivoice = 0; Ivoice < N_POLY; Ivoice++) {
     assignKeyPressToVoice(keybedData, newestKeyInd[0], Ivoice);
@@ -581,7 +582,7 @@ void allocateVoiceForChordMem(keybed_t *keybed)
   keybed->findNewestKeyPresses(nToFind, newestKeyInd);
 
   //is this a change in voice?
-  if ((allVoiceData[chordMemState.voiceIndexOfBase].noteNum != keybedData[newestKeyInd[0]].noteNum) |
+  if (((allVoiceData[chordMemState.voiceIndexOfBase].noteNum != keybedData[newestKeyInd[0]].noteNum) && (keybedData[newestKeyInd[0]].isRibbon == false)) ||
       (keybedData[newestKeyInd[0]].forceRetrigger == true) ||
       (keybedData[newestKeyInd[0]].isNewVelocity == true)) {
     noteIsChangingOrRestarting = true;
@@ -641,6 +642,7 @@ void assignKeyPressToVoice(keyPressData_t *keybedData, int const &I_key, int con
   //allVoiceData[I_voice].noteNum = keybedData[I_key].noteNum;
   //allVoiceData[I_voice].targNoteNum_x16bits = keybedData[I_key].targNoteNum_x16bits;
   allVoiceData[I_voice].setNoteNum(keybedData[I_key].targNoteNum_x16bits);
+  allVoiceData[I_voice].isRibbon = keybedData[I_key].isRibbon;
   allVoiceData[I_voice].noteVel = keybedData[I_key].noteVel;
   allVoiceData[I_voice].noteGate = keybedData[I_key].isGateActive();
   allVoiceData[I_voice].start_millis =  keybedData[I_key].start_millis;
