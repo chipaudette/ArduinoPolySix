@@ -23,6 +23,8 @@ void serviceSerial3(void) {
     
     //read the first byte
     byte1 = Serial3.read();
+
+
     
     if (byte1 == 0xF8) {
       //timing signal, skip
@@ -83,19 +85,24 @@ void serviceSerial3(void) {
         case 0x90:
           //note on message
           if (DEBUG_TO_SERIAL) { 
-            Serial.print(F("Note On Received: noteNum = "));
+            Serial.print(F("Note ON Received: noteNum = "));
             Serial.print(noteNum); 
             Serial.print(F(", Vel = "));
             Serial.println(noteVel);
           }
           //turnOnStatLight(STAT2);//turn on STAT2 light indicating that a note is active
-          trueKeybed.addKeyPress(noteNum,noteVel);
-          trueKeybed_givenList.addKeyPress(noteNum,noteVel);
+          trueKeybed.addKeyPress(noteNum,noteVel,false);
+          trueKeybed_givenList.addKeyPress(noteNum,noteVel,false);
           break;
           
         case 0x80:
           //note off
-          if (DEBUG_TO_SERIAL) Serial.println(F("Note Off Message Received"));
+          if (DEBUG_TO_SERIAL) { 
+            Serial.print(F("Note OFF Received: noteNum = "));
+            Serial.print(noteNum); 
+            Serial.print(F(", Vel = "));
+            Serial.println(noteVel);
+          }
           //turnOffStatLight(STAT2);//turn off light that had been indicating that a note was active
           trueKeybed.stopKeyPress(noteNum,noteVel);
           trueKeybed_givenList.stopKeyPress(noteNum,noteVel);

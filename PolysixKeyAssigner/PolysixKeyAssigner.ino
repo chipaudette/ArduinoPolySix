@@ -226,7 +226,7 @@ void saveEEPROM(void) {
 
 
 void printTuningFactors(void) {
-  Serial.println("printTuningFactors(): Tuning factors...");
+  Serial.println(F("printTuningFactors(): Tuning factors..."));
   for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
       Serial.print("  : V"); Serial.print(I_voice); Serial.print(": ");
       for (int Ioct = 0; Ioct < N_OCTAVES_TUNING; Ioct++) {

@@ -33,7 +33,7 @@ void setLEDPins(void);
 #define SET_B_LOW (digitalWrite(PS_B_PIN,LOW))
 
 void setupDigitalPins(void) {
-  Serial.println("setupDigitalPins: OK!");
+  Serial.println(F("setupDigitalPins: OK!"));
   //setup the DB port as outputs
   DDRA = 0b11111111;  //set all of portA as outputs
 

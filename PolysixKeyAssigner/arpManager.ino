@@ -49,7 +49,7 @@ void arpManager_t::resetArpCounters(void)
 
 void arpManager_t::startArp(const int &mode,const assignerState_t &localAssignerState)
 { 
-  Serial.print("arpManager: startArp: mode = "); Serial.println(mode);
+  Serial.print(F("arpManager: startArp: mode = ")); Serial.println(mode);
   debug__call_count = 0; //reset this...only used for debugging
 
   //reset the arp counters
@@ -113,7 +113,7 @@ void arpManager_t::stopArp(void)
   int note1;
   boolean isActive;
   
-  Serial.println("ArpManager: stopArp: stopping...");
+  Serial.println(F("ArpManager: stopArp: stopping..."));
 
   //stop the last played note
   outputKeybed->stopKeyPress(lastIssuedNoteNumber_wOctave,defaultNoteOffVel);
@@ -314,7 +314,7 @@ void arpManager_t::checkAndResetArp(const assignerState_t &localAssignerState)
         //the many-note psuedo sequencer ("given list" mode) should only be available the first time we enter arp.
         //if we're pressing more notes now, drop out of the "given list" mode back to normal starttime bode.
         if (arpSortMode == ARP_SORTMODE_GIVENLIST) {
-          Serial.println("arpManager: checkAndResetArp 1: switching to ARP_SORTMODE_STARTTIME.");
+          Serial.println(F("arpManager: checkAndResetArp 1: switching to ARP_SORTMODE_STARTTIME."));
           arpSortMode = ARP_SORTMODE_STARTTIME;
           nTrueKeysActive = countActualActiveNotes(inputKeybed->getKeybedDataP(),inputKeybed->getMaxKeySlots());
         }
@@ -325,7 +325,7 @@ void arpManager_t::checkAndResetArp(const assignerState_t &localAssignerState)
   } else {
     //a key (or keys) are pressed
     if (resetCountersWhenKeysPressed == true) {
-      Serial.println("checkAndResetArp: key pressed, reseting counters...");
+      Serial.println(F("checkAndResetArp: key pressed, reseting counters..."));
       
 //      //the many-note psuedo sequencer ("given list" mode) should only be available the first time we enter arp.
 //      //if we're pressing more notes now, drop out of the "given list" mode back to normal starttime bode.
@@ -491,11 +491,11 @@ void arpManager_t::sortArpNotesGivenOrder(void) {
     if (source_ind >= maxKeyPress) source_ind -= maxKeyPress; //wrap around, if needed
 
     if (printDebug) {
-      Serial.print("    : Note, = ");Serial.print(Inote); 
-      Serial.print(", Source = "); Serial.print(source_ind); 
-      Serial.print(", Latched = "); Serial.print((givenListKeybed->allKeybedData[source_ind]).isGateActiveOrLatched());
-      Serial.print(", Note Num = "); Serial.print((givenListKeybed->allKeybedData[source_ind]).noteNum);
-      Serial.print(", Start = "); Serial.print((givenListKeybed->allKeybedData[source_ind]).start_millis);
+      Serial.print(F("    : Note, = "));Serial.print(Inote); 
+      Serial.print(F(", Source = ")); Serial.print(source_ind); 
+      Serial.print(F(", Latched = ")); Serial.print((givenListKeybed->allKeybedData[source_ind]).isGateActiveOrLatched());
+      Serial.print(F(", Note Num = ")); Serial.print((givenListKeybed->allKeybedData[source_ind]).noteNum);
+      Serial.print(F(", Start = ")); Serial.print((givenListKeybed->allKeybedData[source_ind]).start_millis);
       Serial.println();
     }
 
@@ -613,7 +613,7 @@ void arpManager_t::updateArp(const assignerState_t &localAssignerState)
         //this is the normal branch
         lastIssuedNoteNumber = sortedNotes[curArpStep].noteNum;
         lastIssuedNoteNumber_wOctave = lastIssuedNoteNumber + 12*curArpOctave;
-        outputKeybed->addKeyPress(lastIssuedNoteNumber_wOctave,sortedNotes[curArpStep].noteVel);
+        outputKeybed->addKeyPress(lastIssuedNoteNumber_wOctave,sortedNotes[curArpStep].noteVel,false);
       //}
     }
   }
