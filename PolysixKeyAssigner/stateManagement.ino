@@ -99,6 +99,7 @@ void interpretButtonsAndSwitches_KEYPANEL_TUNING(assignerButtonState2_t &cur_but
         break;
     }
 
+
     //Interpret switches determining which voice to be tuned
     switch (cur_but_state.arp_dir.state) {
       case (ARP_DIR_UP):
@@ -127,16 +128,16 @@ void interpretButtonsAndSwitches_KEYPANEL_TUNING(assignerButtonState2_t &cur_but
     //interpret buttons to determine how much tuning to do
     bool printDebug = true;
     if (cur_but_state.hold.wasJustReleased()==true) {
-       adjustTuningThisVoice(-5,printDebug);
+       adjustTuningThisVoiceOrRibbon(-5,printDebug);
     }
     if (cur_but_state.chord_mem.wasJustReleased()==true) {
-      adjustTuningThisVoice(-1,printDebug);
+      adjustTuningThisVoiceOrRibbon(-1,printDebug);
     }
     if (cur_but_state.unison.wasJustReleased()==true) {
-      adjustTuningThisVoice(+1,printDebug);
+      adjustTuningThisVoiceOrRibbon(+1,printDebug);
     }
     if (cur_but_state.poly.wasJustReleased()==true) {
-      adjustTuningThisVoice(+5,printDebug);
+      adjustTuningThisVoiceOrRibbon(+5,printDebug);
     }
 }
 

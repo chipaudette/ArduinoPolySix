@@ -54,17 +54,36 @@ class Ribbon {
     #define N_ADJUST_CAL 2
     float cal_adjust[N_ADJUST_CAL] = {0.0, 0.0}; //adjustment to cal. Low end of ribbon and high end of ribbon.  Negative values lowers the pitch
     void setCalToDefaultPlusAdjustment(void) {
+      //if (Serial) Serial.println("setCalToDefaultPlusAdjustment: adjusting...");
       for (int i=0; i<N_CAL; i++) { 
         cal_input_vals[i] = default_cal_input_vals[i]; //default value for the calibration
+         //if (Serial) { Serial.print("    "); Serial.print(i); Serial.print(", default = "); Serial.print(cal_input_vals[i]); }
 
         //now, adjust the calibration by the two-point adjustment
         float cur_val = cal_input_vals[i];
         float fracOfSpan = (cur_val - default_cal_input_vals[0])/(default_cal_input_vals[N_CAL-1]-default_cal_input_vals[0]);
         float adjustment = fracOfSpan * (cal_adjust[1]-cal_adjust[0]) + cal_adjust[0];
         cal_input_vals[i] -= adjustment;
+        //if (Serial) { Serial.print(", adjust = "); Serial.print(adjustment);Serial.print(", final = "); Serial.println(cal_input_vals[i]);}
       }      
     }
-
+    float setCal(int calAdjustInd, float newVal) {
+      if (calAdjustInd <= N_ADJUST_CAL) {
+        cal_adjust[calAdjustInd] = newVal;
+        setCalToDefaultPlusAdjustment(); //update the combined table of the default cal plus the adjustment
+        return cal_adjust[calAdjustInd];
+      }
+      return -999.999f;
+    }
+    float incrementCal(int calAdjustInd, float addedVal) {
+      //Serial.print("ribbon: incrementCal: calAdjustInd, addedVal = "); Serial.print(calAdjustInd); Serial.print(", "); Serial.println(addedVal);
+      if (calAdjustInd <= N_ADJUST_CAL) { 
+        float foo_val = setCal(calAdjustInd, cal_adjust[calAdjustInd]+addedVal);
+        //Serial.print("ribbon: incrementCal: newVal = "); Serial.println(foo_val);
+      }
+      return -999.999f;
+    }
+    
   private:
     bool is_note_on = false;
     int keybed_voice_ind = -1;
