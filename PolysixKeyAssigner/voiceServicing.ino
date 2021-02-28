@@ -174,11 +174,9 @@ byte getPitchByte(const int &voiceInd) //voiceInd counts 1 to 8 (not 0 to 7)
         //noteNum += 24;
         targNoteNum_x16bits += (((long)24) << 16);
       }
-      //targNoteNum_x16bits = ((long)noteNum) << 16; //target pitch
-      tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,allVoiceData[voiceInd-1].noteNum); //voiceInd starts at one.
-      curNoteNum_x16bits = allVoiceData[voiceInd-1].curNoteNum_x16bits; //current pitch
 
       //compute portamento
+      curNoteNum_x16bits = allVoiceData[voiceInd-1].curNoteNum_x16bits; //current pitch
       int32_t des_jump = targNoteNum_x16bits - curNoteNum_x16bits;
       int32_t increment_x16bits =  des_jump / porta_time_const[porta_setting_index];
       increment_x16bits = (increment_x16bits * ((int32_t)(5 + voiceInd))) >> 3; //multiply by 6/8, 7/8, 8/8, 9/8, 10/8, or 11/8 to spread the voices
@@ -202,7 +200,9 @@ byte getPitchByte(const int &voiceInd) //voiceInd counts 1 to 8 (not 0 to 7)
     }
   }
 
-  //adjust the pitch based on the pitch correction
+  //compute the tuning correction and apply
+  //tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,allVoiceData[voiceInd-1].noteNum); //voiceInd starts at one.
+  tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,(int)(curNoteNum_x16bits >> 16)); //voiceInd starts at one.
   curNoteNum_x16bits += tuningCorrection_x16bits;  //note that a positive correction results in downward pitch, so change the sign here
 
   //get the byte to output
