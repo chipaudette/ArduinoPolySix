@@ -64,7 +64,7 @@
 #define DAC_COUNTS_PER_NOTE_x8bits (8736)  //12-bit divided by 10 octaves with 12 notes per octave...all assuming 5V full scale and 0.5V/octave scaling
 //define DAC_COUNTS_PER_NOTE_x8bits (8806)  //12-bit divided by 10 octaves with 12 notes per octave...all assuming 4.960V full scale and 0.5V/octave scaling
 #define FULL_SCALE_INT16 (32768)
-#define N_OCTAVES_TUNING (6)  //how many entries will be in the tuning table
+#define N_OCTAVES_TUNING (8)  //how many entries will be in the tuning table
   
 typedef unsigned long millis_t;
 typedef unsigned long micros_t;
