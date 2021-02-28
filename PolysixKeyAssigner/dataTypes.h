@@ -57,8 +57,8 @@
 #define LFO_MIN 0
 #define LFO_MID 511
 #define LFO_TRIANGLE 1
-#define LFO_SQUARE 2
-#define LFO_SQUARE_WITH_MID 3
+#define LFO_SQUARE 2      //isn't really used for anything (yet)
+#define LFO_SQUARE_WITH_MID 3  //isn't really used for anything (yet)
 #define MAX_10BIT (1023)
 #define MAX_12BIT (4095)
 #define DAC_COUNTS_PER_NOTE_x8bits (8736)  //12-bit divided by 10 octaves with 12 notes per octave...all assuming 5V full scale and 0.5V/octave scaling
@@ -71,9 +71,6 @@ typedef unsigned long micros_t;
 typedef long int int32_t;
 
 //define data structure for describing key presses
-//define UNASSIGNED_TO_VOICE -1
-//ifndef _KEYPRESS_TYPES
-//define _KEYPRESS_TYPES
 class keyPressData_t {
   public:
     keyPressData_t(void) { reset(); };
@@ -124,16 +121,11 @@ class keyPressData_t {
       targNoteNum_x16bits = _noteNum_x16bits;
       return noteNum;
     }
-//    void copyFrom(const keyPressData_t &input) {
-//      noteNum = input.noteNum;      noteVel = input.noteVel;      isPressed = input.isPressed;      isHeld = input.isHeld;
-//      start_millis = input.start_millis;      end_millis = input.end_millis;      forceRetrigger = input.forceRetrigger;
-//    } 
   private:
 };
 
 
 //data structure defining what's happening in a voice
-//typedef struct {
 class voiceData_t {
   public:
     
@@ -176,14 +168,14 @@ typedef struct {
   int arp_range;
 } arp_parameters_t;
 
-#define TUNING_MODE_ALL_VOICES (0)
-#define TUNING_MODE_ALL_OCT_OF_ONE_VOICE (1)
-#define TUNING_MODE_ONE_OCT_OF_ONE_VOICE (2)
+#define TUNING_MODE_ALL_VOICES (0)   //I'm not sure these are used for anything
+#define TUNING_MODE_ALL_OCT_OF_ONE_VOICE (1)  //I'm not sure these are used for anything
+#define TUNING_MODE_ONE_OCT_OF_ONE_VOICE (2)  //I'm not sure these are used for anything
 class tuningModeState_t {
   public:
     tuningModeState_t(void) {}
-    int voiceCommanded = 0;  //zero to N_POLY
-    int adjustmentMode = TUNING_MODE_ALL_VOICES;
+    int voiceCommanded = 0;  //zero to N_POLY     //I'm not sure these are used for anything
+    int adjustmentMode = TUNING_MODE_ALL_VOICES;  //I'm not sure these are used for anything
 };
 
 class assignerState_t {

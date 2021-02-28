@@ -69,7 +69,6 @@ volatile boolean arp_period_changed = false;
 int aftertouch_val = 0;
 int porta_setting_index = 0;
 int porta_time_const[] = {2, 6, 18}; //one time constant, in units of voice cycles (9*676usec)
-//long porta_minstep[] = {9000L,8000L,6000L};
 long porta_minstep[] = {300L, 300L, 300L};
 int aftertouch_scale[] = {0, 5, 15};
 int aftertouch_setting_index = 1;
@@ -78,8 +77,6 @@ int32_t LFO_noteBend_x16bits = 0;
 int LFO_type = LFO_TRIANGLE;
 int32_t detune_noteBend_x16bits = 3500L;  //basic unit of detuning...combines with detune factors below
 int defaultDetuneFactors[] = {0, -1, 0, 1, -2, 2};
-//int unisonDetuneFactors[] = {-1,-2,+2,-2,+2,1};
-//int unisonDetuneFactors[] = {0,-1,0,-2,+1,-2};
 int unisonDetuneFactors[] = {0, 1, -1, 2, -2, 0}; //pre 2013-06-12
 int unisonPolyDetuneFactors[] = { -1, -1, -1, 1, 1, 1};
 int32_t perVoiceTuningFactors_x16bits[N_POLY][N_OCTAVES_TUNING][1];
@@ -96,9 +93,7 @@ byte aftertouch_lookup[128] = {0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3
 long voiceDuration_usec = 676; //standard is 676, human debugging is 250000
 
 //define the timer callback function
-void timer3_callback() {
-  newTimedAction = true;
-}
+void timer3_callback() { newTimedAction = true; }
 
 //include some functions that are useful
 #include "hardwareServices.h"
@@ -107,8 +102,6 @@ void switchStateManager::printUpdateVals(const int &state, const int &debounceCo
 {
   Serial.print(F("updateState: state "));
   Serial.print(state);
-  //  Serial.print(", curState ");
-  //  Serial.print(curState);
   Serial.print(F(", debounce "));
   Serial.println(debounceCounter);
   return;
@@ -124,9 +117,6 @@ void setup() {
   setupDigitalPins();
 
   //initialize data structures
-  //initAssigerButtonState(assignerButtonState);
-  //copyAssignerButtonState(assignerButtonState,prevAssignerButtonState);
-  //initAssignerState();
   assignerState.init();
   initChordMemState();
   initializeVoiceData(allVoiceData, N_POLY);
@@ -140,7 +130,7 @@ void setup() {
   Timer3.attachInterrupt(timer3_callback);  // attaches callback() as a timer overflow interrupt
 
   //setup interupt pin for arpeggiator Arpegiator and LFO
-#define PS_ACKI_INT 4  //which interrupt?  On Mega 2560, #4 is on pin 19. http://arduino.cc/en/Reference/AttachInterrupt 
+  #define PS_ACKI_INT 4  //which interrupt?  On Mega 2560, #4 is on pin 19. http://arduino.cc/en/Reference/AttachInterrupt 
   attachInterrupt(PS_ACKI_INT, measureInterruptTiming, RISING); //measure the ARP timing
   //pinMode(LFO_OUT_PIN,OUTPUT);
   //Timer4.initialize(LFO_PWM_MICROS/2);
@@ -149,8 +139,6 @@ void setup() {
   //setup the ribbon
   myRibbon.setup_ribbon(RIBBON_PIN, RIBBON_REF_PIN, &trueKeybed);
 
-  //if (DEBUG_TO_SERIAL)
-  //Serial.println("Finished with Setup");
 }
 
 //unsigned long count =0;
@@ -374,8 +362,6 @@ void adjustTuningThisVoiceOrRibbon(int adjustmentFactor, bool printDebug) {
       Serial.println();
       Serial.print(F("adjustTuningThisVoiceOrRibbon: new tuning factor = ")); Serial.println(perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd][Istartend]);
     }
-  
-    //return perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd][Istartend];
   }
 }
 
