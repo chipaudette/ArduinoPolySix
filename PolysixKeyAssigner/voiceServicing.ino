@@ -158,50 +158,47 @@ byte getPitchByte(const int &voiceInd) //voiceInd counts 1 to 8 (not 0 to 7)
   if (voiceInd == 7) {
     //for voiceInd 7, always return C7 (top note of the PolySix)
     curNoteNum_x16bits = ((long)C7_NOTE_NUM) << 16;
-  } else {
-    if (voiceInd == 8) {
+  } else if (voiceInd == 8) {
       //for voiceInd 8, always return the pitch byte for voice 1
       //targNoteNum=allVoiceData[0].noteNum; //target pitch
       curNoteNum_x16bits = allVoiceData[0].curNoteNum_x16bits; //this is the value last used for note 0, so that's all we need
-    } else {
-      //for voices 1-6, get the note number of the current voice index (where C0 on the Polysix s zero)
-      //int noteNum = allVoiceData[voiceInd-1].noteNum;
-      targNoteNum_x16bits = allVoiceData[voiceInd-1].targNoteNum_x16bits;
-      if (assignerState.octave == OCTAVE_8FT) {
-        //noteNum += 12;
-        targNoteNum_x16bits += (((long)12) << 16);
-      } else if (assignerState.octave == OCTAVE_4FT) {
-        //noteNum += 24;
-        targNoteNum_x16bits += (((long)24) << 16);
-      }
-
-      //compute portamento
-      curNoteNum_x16bits = allVoiceData[voiceInd-1].curNoteNum_x16bits; //current pitch
-      int32_t des_jump = targNoteNum_x16bits - curNoteNum_x16bits;
-      int32_t increment_x16bits =  des_jump / porta_time_const[porta_setting_index];
-      increment_x16bits = (increment_x16bits * ((int32_t)(5 + voiceInd))) >> 3; //multiply by 6/8, 7/8, 8/8, 9/8, 10/8, or 11/8 to spread the voices
-      int32_t foo_porta_minstep = porta_minstep[porta_setting_index]; //twiddle the step factor per voice to let the voices diverge
-      if (abs(increment_x16bits) < foo_porta_minstep) {
-        if (des_jump > 0) {
-          increment_x16bits = min(foo_porta_minstep, des_jump);
-        } else {
-          des_jump = -des_jump;
-          increment_x16bits = min(foo_porta_minstep, des_jump);
-          increment_x16bits = -increment_x16bits;
-        }
-      }
-      curNoteNum_x16bits += increment_x16bits; //update the current pitch
-
-      //save the pitch back into the voice data structure for next use by portamento calcs
-      if (assignerState.portamento == 0) curNoteNum_x16bits = targNoteNum_x16bits;
-
-      //put the newly calculated current pitch into the voice data structure
-      allVoiceData[voiceInd - 1].curNoteNum_x16bits = curNoteNum_x16bits; //save the current pitch
+  } else {
+    //for voices 1-6, get the note number of the current voice index (where C0 on the Polysix s zero)
+    //int noteNum = allVoiceData[voiceInd-1].noteNum;
+    targNoteNum_x16bits = allVoiceData[voiceInd-1].targNoteNum_x16bits;
+    if (assignerState.octave == OCTAVE_8FT) {
+      //noteNum += 12;
+      targNoteNum_x16bits += (((long)12) << 16);
+    } else if (assignerState.octave == OCTAVE_4FT) {
+      //noteNum += 24;
+      targNoteNum_x16bits += (((long)24) << 16);
     }
+
+    //compute portamento
+    curNoteNum_x16bits = allVoiceData[voiceInd-1].curNoteNum_x16bits; //current pitch
+    int32_t des_jump = targNoteNum_x16bits - curNoteNum_x16bits;
+    int32_t increment_x16bits =  des_jump / porta_time_const[porta_setting_index];
+    increment_x16bits = (increment_x16bits * ((int32_t)(5 + voiceInd))) >> 3; //multiply by 6/8, 7/8, 8/8, 9/8, 10/8, or 11/8 to spread the voices
+    int32_t foo_porta_minstep = porta_minstep[porta_setting_index]; //twiddle the step factor per voice to let the voices diverge
+    if (abs(increment_x16bits) < foo_porta_minstep) {
+      if (des_jump > 0) {
+        increment_x16bits = min(foo_porta_minstep, des_jump);
+      } else {
+        des_jump = -des_jump;
+        increment_x16bits = min(foo_porta_minstep, des_jump);
+        increment_x16bits = -increment_x16bits;
+      }
+    }
+    curNoteNum_x16bits += increment_x16bits; //update the current pitch
+
+    //save the pitch back into the voice data structure for next use by portamento calcs
+    if (assignerState.portamento == 0) curNoteNum_x16bits = targNoteNum_x16bits;
+
+    //put the newly calculated current pitch into the voice data structure
+    allVoiceData[voiceInd - 1].curNoteNum_x16bits = curNoteNum_x16bits; //save the current pitch
   }
 
   //compute the tuning correction and apply
-  //tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,allVoiceData[voiceInd-1].noteNum); //voiceInd starts at one.
   tuningCorrection_x16bits = getTuningCorrection(voiceInd-1,(int)(curNoteNum_x16bits >> 16)); //voiceInd starts at one.
   curNoteNum_x16bits += tuningCorrection_x16bits;  //note that a positive correction results in downward pitch, so change the sign here
 
