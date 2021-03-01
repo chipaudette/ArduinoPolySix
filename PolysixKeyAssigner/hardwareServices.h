@@ -260,6 +260,7 @@ void setLEDPins(void)
       if (assignerState.poly > OFF) bitClear(LED_out,LED_POLY_BIT);//clear the bit to turn on the LED
       if (assignerState.unison > OFF) bitClear(LED_out,LED_UNISON_BIT);//clear the bit to turn on the LED
       if (assignerState.chord_mem > OFF) bitClear(LED_out,LED_CHORD_BIT);//clear the bit to turn on the LED
+      if (assignerState.chord_mem_smart > OFF) bitClear(LED_out, LED_UNISON_BIT); //clear the bit to turn on the LED
       if (assignerState.hold > OFF) bitClear(LED_out,LED_HOLD_BIT);//clear the bit to turn on the LED
   
       //adjust the LED brightness for the legato state

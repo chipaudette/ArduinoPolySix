@@ -460,7 +460,7 @@ void updateVoiceAllocation(void)
   } else if (assignerState.unison == ON) {
     allocateVoiceForUnison(keybed);
   } else if (assignerState.chord_mem == ON) {
-    allocateVoiceForChordMem(keybed);
+    allocateVoiceForChordMem(keybed,assignerState.chord_mem_smart);
   }
 }
 
@@ -568,7 +568,7 @@ void allocateVoiceForUnisonPoly(keybed_t *keybed)
 }
 
 
-void allocateVoiceForChordMem(keybed_t *keybed)
+void allocateVoiceForChordMem(keybed_t *keybed, int use_smart)
 {
   static int newestKeyInd[1];
   static int nToFind = 1;
@@ -593,7 +593,14 @@ void allocateVoiceForChordMem(keybed_t *keybed)
     assignKeyPressToVoice(keybedData, newestKeyInd[0], Ivoice);
     //newNote =  keybedData[newestKeyInd[0]].noteNum + chordMemState.noteShift[Ivoice];//shift the note
     //allVoiceData[Ivoice].noteNum = constrain(newNote, 0, 119);
-    newNote_x16bits = keybedData[newestKeyInd[0]].targNoteNum_x16bits + chordMemState.noteShift_x16bits[Ivoice];
+    //newNote_x16bits = keybedData[newestKeyInd[0]].targNoteNum_x16bits + chordMemState.noteShift_x16bits[Ivoice];
+
+    //if (Ivoice == newestKeyInd[0]) {
+    //  //this is the root
+    //  newNote_x16bits = keybedData[newestKeyInd[0]].targNoteNum_x16bits;
+    //} else {
+      newNote_x16bits = chordMemState.getNewTargNoteNum_x16bits(keybedData[newestKeyInd[0]],Ivoice,(bool)use_smart);
+    //}
     allVoiceData[Ivoice].setNoteNum(newNote_x16bits);
     
     if (chordMemState.isNoteActive[Ivoice] == LOW) {

@@ -45,6 +45,7 @@
 #define STATE_UNISON (20)
 #define STATE_UNISON_POLY (25)
 #define STATE_CHORD (30)
+#define STATE_CHORD_SMART (32)
 #define STATE_CHORD_POLY (35)
 
 #define OCTAVE_16FT (0)
@@ -188,6 +189,7 @@ class assignerState_t {
       poly=ON;
       unison=OFF;
       chord_mem=OFF;
+      chord_mem_smart=OFF;
       hold=HOLD_STATE_OFF;
       octave = OCTAVE_16FT;
       legato = OFF;
@@ -200,6 +202,7 @@ class assignerState_t {
     int poly;
     int unison;
     int chord_mem;
+    int chord_mem_smart;
     int hold;
     int octave;
     int legato;
@@ -330,102 +333,11 @@ class assignerButtonState2_t {
     pushButtonStateManager tapeEnableToggle;
 };
 
-typedef struct {
-  long int noteShift_x16bits[N_POLY];
-  int isNoteActive[N_POLY];
-  int voiceIndexOfBase;
-  int detuneFactor[N_POLY];
-} chordMemState_t;
+boolean isHoldNewNote(void);  //defined in stateManagement.ino
 
-class keybed_base_t {
-  public: 
-    keybed_base_t(void) {};
-    virtual int addKeyPress(const int &, const int &, const bool &) = 0;
-    virtual int addKeyPress(const float &, const int &, const bool &) = 0;
-    virtual void stopKeyPress(const int &,const int &) = 0;
-    virtual void stopKeyPressByInd(const int &ind, const int &noteVel)= 0;
-    virtual int getMaxKeySlots(void) = 0;
+#include "keybed.h"
 
-    virtual keyPressData_t* getKeybedDataP(void)=0;
-    virtual keyPressData_t* getKeybedDataP(const int &Ikey)=0;
-    
-  protected: 
-    int nKeyPressSlots;
-};
-
-class keybed_t : public keybed_base_t {
-  public:
-    keybed_t(void);
-    virtual void resetAllKeybedData(void);
-    virtual void resetKeyPress(const int &);
-    virtual int addKeyPress(const int &,const int &, const bool &);
-    virtual int addKeyPress(const float &,const int &, const bool &);
-    virtual void createKeyPress(const int &, const float &, const int &, const bool &);
-    virtual void stopKeyPress(const int &,const int &);
-    virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
-    virtual void stopAllKeyPresses(void);
-    void printKeyPressState(void);
-    virtual keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
-    virtual keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
-    int isGateActive(const int &Ikey);
-    int isAnyGateActive(void);
-    virtual void deactivateHold(void);
-    int get_nKeyPressSlots(void) { return nKeyPressSlots; };
-    void set_nKeyPressSlots(const int &);
-    
-    int findOldestKeyPress_NotPressedNotHeld(void);
-    int findOldestKeyPress_NotPressed(void);
-    int getOldestKeyPress(void);
-    int getNewestKeyPress(void);
-    int get2ndNewestKeyPressNotRibbon(void);
-    void findNewestKeyPresses(int const &,int []);
-    int findNewestPressedOrHeldKeys(const int &, int []);
-    int findNewestReleasedKeys(int const &,int [], int const &);
-
-    static const int maxNKeyPressSlots = N_KEY_PRESS_DATA;
-    keyPressData_t allKeybedData[maxNKeyPressSlots];
-    virtual int getMaxKeySlots(void);
- 
-    
-  protected:
-    void reduceAndConsolodate(const int &);
-};
-
-class keybed_givenlist_t : public keybed_base_t {
-  public:
-    keybed_givenlist_t(void);
-
-    virtual void resetAllKeybedData(void);
-    virtual void resetKeyPress(const int &);
-    virtual int addKeyPress(const int &,const int &, const bool &);
-    virtual int addKeyPress(const float &,const int &, const bool &);
-    virtual void createKeyPress(const int &, const float &, const int &, const bool &);
-    virtual void stopKeyPress(const int &,const int &);
-    virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
-    virtual void stopAllKeyPresses(void);
-
-    virtual keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
-    virtual keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
-
-    bool isPressedOrHeld(const int &);
-    virtual int getActiveNoteIndByOrder(const int &);
-    
-    virtual void deactivateHold(void);
-    
-
-    static const int maxNKeyPressSlots = N_KEY_LIST_LEN;
-    keyPressData_t allKeybedData[maxNKeyPressSlots];
-    virtual int getMaxKeySlots(void);
-
-    int getNextInd(void) { return next_ind; };
-    
-  protected:
-    int next_ind = 0;
-    int incrementNextInd(void);
-    
-};
-
-void deactivateHold(keybed_t *);
+void deactivateHold(keybed_t *); //defined where?
 
 #define ARP_SORTMODE_NOTENUM 1
 #define ARP_SORTMODE_STARTTIME 2
@@ -478,5 +390,7 @@ class arpManager_t {
     int debug__call_count = 0;
   
 };
+
+#include "ChordMem.h"
 
 #endif

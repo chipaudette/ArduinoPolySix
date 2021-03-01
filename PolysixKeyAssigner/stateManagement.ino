@@ -4,37 +4,6 @@
 
 #define DEBUG_THIS_FILE false
 
-//only used locally for tracking *changes* in button state
-//static assignerButtonState_t prev_but_state;
-//static assignerButtonState_t but_state_changed;
-
-//void initAssignerState(void)
-//{
-//  assignerState.arp=OFF;
-//  assignerState.poly=ON;
-//  assignerState.unison=OFF;
-//  assignerState.chord_mem=OFF;
-//  assignerState.hold=HOLD_STATE_OFF;
-//  assignerState.octave = OCTAVE_16FT;
-//  assignerState.legato = OFF;
-//  assignerState.portamento = OFF;
-//  assignerState.detune = OFF;
-//  assignerState.keypanel_mode = KEYPANEL_MODE_ARP;
-//  assignerState.velocity_sensitivity = ON;
-//};
-
-void initChordMemState(void)
-{
-  for (int i=0;i<N_POLY;i++) {
-    chordMemState.noteShift_x16bits[i]=0;
-    chordMemState.isNoteActive[i]=OFF;
-    chordMemState.detuneFactor[i]=0;
-  }
-  chordMemState.isNoteActive[0]=ON; //make one note active
-  chordMemState.noteShift_x16bits[0]=0;
-  chordMemState.voiceIndexOfBase = 0; //assume first voice is the one currently allocated as the base of the chord mem
-}
-
 void updateKeyAssignerStateFromButtons(assignerButtonState2_t &cur_but_state)
 {
   static micros_t prev_knob_value = 0L;
@@ -307,6 +276,9 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
     } else if (prevState == STATE_CHORD) {
       Serial.println(F("updatePolyUnisonChordState: Disabling Chord Mem"));
       deactivateChordMemory();
+    } else if (prevState == STATE_CHORD_SMART) {
+      Serial.println(F("updatePolyUnisonChordState: Disabling Chord Mem Smart"));
+      deactivateChordMemory();
     } else if (prevState == STATE_UNISON_POLY) {
       Serial.println(F("updatePolyUnisonChordState: Disabling Unison Poly"));
       deactivateUnisonPoly();
@@ -334,6 +306,10 @@ void updatePolyUnisonChordState(assignerButtonState2_t &cur_but_state)
         activateChordMemory(stateChanged);
         //if (newState != prevState) cur_but_state.chord_mem.user_beenReleased = false;//because button was just pressed
         //if (stateChanged) cur_but_state.chord_mem.user_beenReleased = false;//because button was just pressed
+        break;
+      case STATE_CHORD_SMART:
+        Serial.println(F("updatePolyUnisonChordState: activate Chord_Mem mode."));
+        activateChordMemorySmart(stateChanged);
         break;
       case STATE_UNISON_POLY:
         Serial.println(F("updatePolyUnisonChordState: activate UnisonPoly mode."));
@@ -666,6 +642,7 @@ void activatePoly(boolean const &stateChanged)
   assignerState.poly = ON;
   assignerState.unison = OFF;
   assignerState.chord_mem = OFF;
+  assignerState.chord_mem_smart = OFF;
 
   if (stateChanged==true) {
     //Serial.println("activatePoly: stateChanged is true.");
@@ -679,6 +656,7 @@ void activateUnison(boolean const &stateChanged)
   assignerState.poly = OFF;
   assignerState.unison = ON;
   assignerState.chord_mem = OFF;
+  assignerState.chord_mem_smart = OFF;
 
   //change the number of voices that are tracked by the keybed to one
   //trueKeybed.set_nKeyPressSlots(1);
@@ -709,6 +687,7 @@ void activateUnisonPoly(boolean const &stateChanged)
   assignerState.poly = ON;
   assignerState.unison = ON;
   assignerState.chord_mem = OFF;
+  assignerState.chord_mem_smart = OFF;
   
   //change the number of voices that are tracked by the keybed to three
   trueKeybed.set_nKeyPressSlots(3);
@@ -742,21 +721,26 @@ void activateChordMemory(boolean const &stateChanged)
   //if arp is off, lock in the currently pressed notes for the chord
   if (assignerState.arp == OFF) {
     if (stateChanged) {
-      Serial.println(F("activaeChordMemory: stateChanged is true."));
+      Serial.println(F("activateChordMemory: stateChanged is true."));
       //lock in chord voicing of all pressed or held notes
-      setChordMemState();
+      chordMemState.setState(trueKeybed);
     }
   }
 
   assignerState.poly = OFF;
   assignerState.unison = OFF;
   assignerState.chord_mem = ON;
+  assignerState.chord_mem_smart = OFF;
 
   if (stateChanged==true) {
     assignerState.legato = OFF;
   }
 }
 
+void activateChordMemorySmart(boolean const &stateChanged) {
+  activateChordMemory(stateChanged);
+  assignerState.chord_mem_smart = ON;
+}
  
 void deactivateChordMemory(void) 
 {
@@ -774,6 +758,7 @@ void deactivateChordMemory(void)
   }
 }
 
+
 void activateChordPoly(boolean const &stateChanged)
 //chord memory should already have been active
 { 
@@ -782,6 +767,7 @@ void activateChordPoly(boolean const &stateChanged)
   assignerState.poly = ON;
   assignerState.unison = OFF;
   assignerState.chord_mem = ON;
+  assignerState.chord_mem_smart = OFF;
 
   if (stateChanged==true) {
     Serial.println(F("activateChordPoly: stateChanged is true."));
@@ -800,195 +786,6 @@ void deactivateChordPoly(void)
   trueKeybed.set_nKeyPressSlots(N_KEY_PRESS_DATA);
 }
 
-void setChordMemState(void)
-{
-  keyPressData_t* keyPress;
-
-  //find lowest active note and note index in the keybed data
-  int lowestKeyInd = 0; //initialize
-  long int lowestNoteNum_x16bits = (1000L << 16);  //initialize to something stupidly large
-  boolean anyNoteFound = false;
-  for (int Ikey=0;Ikey<N_KEY_PRESS_DATA;Ikey++) {     
-    if (trueKeybed.isGateActive(Ikey) == ON) {     
-      keyPress = trueKeybed.getKeybedDataP(Ikey);
-      if (keyPress->targNoteNum_x16bits < lowestNoteNum_x16bits) {
-        lowestKeyInd = Ikey;
-        lowestNoteNum_x16bits = keyPress->targNoteNum_x16bits;
-        anyNoteFound=true;
-      }
-    }
-  }
-  if (!anyNoteFound) {
-    //no note was found, do not change the chord mem state
-    return;
-  }
-
-  //define the chord mem note numbers relative to the lowest note
-  chordMemState.voiceIndexOfBase = lowestKeyInd;
-
-  //set the state of each voice relative to the lowest note
-  //static int noteShift = 0;
-  long int noteShift_x16bits = 0;
-  for (int Ivoice=0;Ivoice<N_POLY;Ivoice++) {
-    keyPress = trueKeybed.getKeybedDataP(Ivoice);
-    //noteShift = keyPress->noteNum - lowestNoteNum;
-    //noteShift = constrain(noteShift,0,119);
-    noteShift_x16bits = keyPress->targNoteNum_x16bits - lowestNoteNum_x16bits;
-    noteShift_x16bits = constrain(noteShift_x16bits,0, (119L << 16));
-    chordMemState.noteShift_x16bits[Ivoice]=noteShift_x16bits;
-    chordMemState.isNoteActive[Ivoice] = trueKeybed.isGateActive(Ivoice);
-    //chordMemState.isNoteActive[Ivoice] = isGateActive(allKeybedData[Ivoice]);
-  }
-
-  //set the detune factors for each voice
-  setDetuneFactorsForChordMemory();
-
-  //set the root note to be the active note by reseting its start time
-  keyPress = trueKeybed.getKeybedDataP(lowestKeyInd);
-  keyPress->start_millis = millis();
-  keyPress->end_millis = keyPress->start_millis;
-
-  if (DEBUG_TO_SERIAL & DEBUG_THIS_FILE) {
-    Serial.print(F("setChordMemState: Shift: "));
-    for (int i=0;i<N_POLY;i++) {
-      Serial.print(chordMemState.noteShift_x16bits[i] >> 16);
-      Serial.print(" ");
-      delayMicroseconds(20);
-    }
-    Serial.print(F("isActive: "));
-    for (int i=0;i<N_POLY;i++) {
-      Serial.print(chordMemState.isNoteActive[i]);
-      Serial.print(" ");
-      delayMicroseconds(20);
-    }
-    Serial.println();
-  }
-}
-
-//set the detune factors for each note in the chord memory.
-//assumes that the noteShift has already been set for each voice
-void setDetuneFactorsForChordMemory(void) {
-
-  //look for special case of chip's favorite 4-note Mono/Poly config
-  int isMonoPolyOctaves = checkAndApplyMonoPolyOctaveDetune();
-
-  //if not Mono/Poly octaves, distribute the detune the regular way
-  if (isMonoPolyOctaves == false) {
-    int nActive=0,nPair=0;
-    int prevActiveVoiceInd=-1;
-    for (int i=0; i<N_POLY; i++) { 
-      if (chordMemState.isNoteActive[i]==true) nActive++; 
-    }
-    if (nActive == 1) {
-      //just the root note...no detune
-      chordMemState.detuneFactor[chordMemState.voiceIndexOfBase] = 0;
-    } else if (nActive == 2) {
-      //just a pair of notes.  Are they octaves or different
-      boolean isOctaves = true;
-      boolean isUnison = true;
-      for (int i=0; i<N_POLY; i++) { 
-        if (chordMemState.isNoteActive[i]==true) { 
-          if ( (((int)(chordMemState.noteShift_x16bits[i] >> 16)) % 12) != 0 ) isOctaves = false;
-          if (chordMemState.noteShift_x16bits[i] != 0) isUnison = false;
-        }
-      }
-      if (isUnison) {
-        //detune root down and octave up
-        for (int i=0; i<N_POLY; i++) {
-          if (i == chordMemState.voiceIndexOfBase) {
-            chordMemState.detuneFactor[i] = 2;  //positive is down, I think
-          } else if (chordMemState.isNoteActive[i]==true) { 
-            chordMemState.detuneFactor[i] = -2;  //positive is down, I think
-          }
-        }
-      } else if (isOctaves) {
-        //detune root down and octave up
-        for (int i=0; i<N_POLY; i++) {
-          if (i == chordMemState.voiceIndexOfBase) {
-            chordMemState.detuneFactor[i] = 1;  //positive is down, I think
-          } else if (chordMemState.isNoteActive[i]==true) { 
-            chordMemState.detuneFactor[i] = -1;  //positive is down, I think
-          }
-        }
-      } else {
-        //detune the non-root note only
-        for (int i=0; i<N_POLY; i++) {
-          if ((i != chordMemState.voiceIndexOfBase) & (chordMemState.isNoteActive[i]==true)) { 
-            chordMemState.detuneFactor[i] = +1;  //positive is down, I think
-          }
-        }
-      }
-    } else {
-      //all other configuration of notes
-      Serial.println(F("stateManagement: setDetuneFactorsForChordMemory: detune method 3"));
-      nActive=0;
-      for (int i=0; i<N_POLY; i++) {
-        if (i == chordMemState.voiceIndexOfBase) {
-          chordMemState.detuneFactor[i] = 0; //don't detune the root
-        } else {
-          if (chordMemState.isNoteActive[i]==true) {
-            nActive++; //only count the non-root note
-            chordMemState.detuneFactor[i]=0;  //don't detune unless it's a pair
-            if ((nActive % 2) == 0) {
-              //it is a new pair!
-              nPair++;
-              chordMemState.detuneFactor[prevActiveVoiceInd] = nPair;
-              chordMemState.detuneFactor[i] = -nPair;
-            }
-            prevActiveVoiceInd = i;
-          }
-        }
-      }
-    }
-  }
-  
-  for (int i = 0; i < N_POLY; i++) {
-    Serial.print(F("stateManagement: setDetuneFactorsForChordMemory: voice "));
-    Serial.print(i);
-    Serial.print(F(" : detune = "));
-    Serial.println(chordMemState.detuneFactor[i]); 
-  }
-}
-
-//does the chord mem have 2 at root and 2 at +1 octave?
-int checkAndApplyMonoPolyOctaveDetune(void) {
-  int isMonoPolyOctaves = true;
-  int nRoot = 0, nOctave = 0;
-  for (int i=0; i<N_POLY; i++) {
-    if (chordMemState.isNoteActive[i]==true) {
-      if (chordMemState.noteShift_x16bits[i] == 0) nRoot++;
-      if (chordMemState.noteShift_x16bits[i] == (12L << 16)) nOctave++;
-      if ((chordMemState.noteShift_x16bits[i] != 0) & ((chordMemState.noteShift_x16bits[i] != (12L << 16)))) isMonoPolyOctaves=false;
-    }
-  }
-  if (!((nRoot==2) & (nOctave==2))) isMonoPolyOctaves=false;
-
-  if (isMonoPolyOctaves==true) {
-    int curRootCount=0,curCountOctave = 0;
-    for (int i=0; i<N_POLY; i++) {
-      if (chordMemState.isNoteActive[i]==true) {
-        if (chordMemState.noteShift_x16bits[i] == 0) {
-          //chordMemState.detuneFactor[i] = 0; //don't detune the roots
-          curRootCount++;
-          if ((curRootCount % 2) == 0) {
-            chordMemState.detuneFactor[i] = 0; //no detune
-          } else {
-            chordMemState.detuneFactor[i] = 0; //no detune
-          }
-        }
-        if (chordMemState.noteShift_x16bits[i] == (12L << 16)) {
-          curCountOctave++;
-          if ((curCountOctave % 2) == 1) {
-            chordMemState.detuneFactor[i] = 1;  //positive is down in pitch
-          } else {
-            chordMemState.detuneFactor[i] = -1; //negative is up in pitch
-          }
-        }
-      }
-    }
-  }
-  return isMonoPolyOctaves;
-}
 
 
 int noButtonsPressed_lookForRelease(assignerButtonState2_t &cur_but_state) 
@@ -1044,6 +841,7 @@ int oneButtonPressed_lookForRelease(assignerButtonState2_t &cur_but_state)
     } else if (cur_but_state.unison.wasJustReleased()==true) {
       /////NO ACTION HERE!
       //newState = STATE_CHORD_UNISON
+      newState = STATE_CHORD_SMART;
     }
     if (newState > STATE_DEFAULT) cur_but_state.chord_mem.set_user_beenPressedAgainToFalse();  //this help us ignore this button when it is eventually released  
      
@@ -1082,6 +880,7 @@ void updateLegatoState(assignerButtonState2_t &but_state, const int &state, cons
 
   if ( ((state == STATE_UNISON) & (isOKtoToggleLegato(unisonButReport)==true)) |
     ((state == STATE_CHORD) & (isOKtoToggleLegato(chordButReport)==true)) |
+    ((state == STATE_CHORD_SMART) & (isOKtoToggleLegato(chordButReport)==true)) |
     ((state == STATE_POLY) & (isOKtoToggleLegato(polyButReport)==true)) )
   {
     toggleLegatoState();

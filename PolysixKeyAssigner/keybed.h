@@ -1,5 +1,97 @@
 
-#include "dataTypes.h"
+//#include "dataTypes.h"
+
+#ifndef _keybed_h
+#define _keybed_h
+
+class keybed_base_t {
+  public: 
+    keybed_base_t(void) {};
+    virtual int addKeyPress(const int &, const int &, const bool &) = 0;
+    virtual int addKeyPress(const float &, const int &, const bool &) = 0;
+    virtual void stopKeyPress(const int &,const int &) = 0;
+    virtual void stopKeyPressByInd(const int &ind, const int &noteVel)= 0;
+    virtual int getMaxKeySlots(void) = 0;
+
+    virtual keyPressData_t* getKeybedDataP(void)=0;
+    virtual keyPressData_t* getKeybedDataP(const int &Ikey)=0;
+    
+  protected: 
+    int nKeyPressSlots;
+};
+
+class keybed_t : public keybed_base_t {
+  public:
+    keybed_t(void);
+    virtual void resetAllKeybedData(void);
+    virtual void resetKeyPress(const int &);
+    virtual int addKeyPress(const int &,const int &, const bool &);
+    virtual int addKeyPress(const float &,const int &, const bool &);
+    virtual void createKeyPress(const int &, const float &, const int &, const bool &);
+    virtual void stopKeyPress(const int &,const int &);
+    virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
+    virtual void stopAllKeyPresses(void);
+    void printKeyPressState(void);
+    virtual keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
+    virtual keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
+    int isGateActive(const int &Ikey);
+    int isAnyGateActive(void);
+    virtual void deactivateHold(void);
+    int get_nKeyPressSlots(void) { return nKeyPressSlots; };
+    void set_nKeyPressSlots(const int &);
+    
+    int findOldestKeyPress_NotPressedNotHeld(void);
+    int findOldestKeyPress_NotPressed(void);
+    int getOldestKeyPress(void);
+    int getNewestKeyPress(void);
+    int get2ndNewestKeyPressNotRibbon(void);
+    int findNewest(const int &,const int &, boolean [], millis_t [], int []);
+    void findNewestKeyPresses(int const &,int []);
+    int findNewestPressedOrHeldKeys(const int &, int []);
+    int findNewestReleasedKeys(int const &,int [], int const &);
+
+    static const int maxNKeyPressSlots = N_KEY_PRESS_DATA;
+    keyPressData_t allKeybedData[maxNKeyPressSlots];
+    virtual int getMaxKeySlots(void);
+ 
+    
+  protected:
+    void reduceAndConsolodate(const int &);
+};
+
+class keybed_givenlist_t : public keybed_base_t {
+  public:
+    keybed_givenlist_t(void);
+
+    virtual void resetAllKeybedData(void);
+    virtual void resetKeyPress(const int &);
+    virtual int addKeyPress(const int &,const int &, const bool &);
+    virtual int addKeyPress(const float &,const int &, const bool &);
+    virtual void createKeyPress(const int &, const float &, const int &, const bool &);
+    virtual void stopKeyPress(const int &,const int &);
+    virtual void stopKeyPressByInd(const int &ind, const int &noteVel); 
+    virtual void stopAllKeyPresses(void);
+
+    virtual keyPressData_t* getKeybedDataP(void) { return allKeybedData; }
+    virtual keyPressData_t* getKeybedDataP(const int &Ikey) { return &(allKeybedData[Ikey]); }
+
+    bool isPressedOrHeld(const int &);
+    virtual int getActiveNoteIndByOrder(const int &);
+    
+    virtual void deactivateHold(void);
+    
+
+    static const int maxNKeyPressSlots = N_KEY_LIST_LEN;
+    keyPressData_t allKeybedData[maxNKeyPressSlots];
+    virtual int getMaxKeySlots(void);
+
+    int getNextInd(void) { return next_ind; };
+    
+  protected:
+    int next_ind = 0;
+    int incrementNextInd(void);
+    
+};
 
 //const int keybed_t::maxNKeyPressSlots = N_KEY_PRESS_DATA;
 
@@ -325,28 +417,9 @@ int keybed_t::findNewestPressedOrHeldKeys(const int &nKeyPressesToFind, int newe
   return nFound;
 }
 
-//find the keys that have been most recently released
-int keybed_t::findNewestReleasedKeys(int const &nKeyPressesToFind,int newestInds[], int const &nDone)
-{
-  static boolean acceptanceCriteria[maxNKeyPressSlots];
-  static millis_t relevantMillis[maxNKeyPressSlots];
-  
-  //assess the acceptance criteria for each candidate key press
-  for (int I_key = 0; I_key < maxNKeyPressSlots;  I_key++) {
-    acceptanceCriteria[I_key] = true;  //everything is accepted in this case!
-    if (I_key >= nKeyPressSlots) acceptanceCriteria[I_key] = false; //except those that are out of contention 
-    relevantMillis[I_key]=max(allKeybedData[I_key].start_millis,allKeybedData[I_key].end_millis);
-  }
-  
-  //call newest search
-  int nFound = findNewest(nKeyPressesToFind, nDone, acceptanceCriteria, relevantMillis, newestInds);
-  
-  return nFound;
-}
-
 
 // helper function that just finds the newest whatever, given the acceptanceCriteria and relevant time scale
-int findNewest(const int &nKeyPressesToFind,const int &nDone, boolean acceptanceCriteria[], millis_t relevantMillis[], int newestInds[])
+int keybed_t::findNewest(const int &nKeyPressesToFind,const int &nDone, boolean acceptanceCriteria[], millis_t relevantMillis[], int newestInds[])
 {
   millis_t candidate_millis = 0;
   int i;
@@ -399,6 +472,25 @@ int findNewest(const int &nKeyPressesToFind,const int &nDone, boolean acceptance
   return nFound;
 }
 
+
+//find the keys that have been most recently released
+int keybed_t::findNewestReleasedKeys(int const &nKeyPressesToFind,int newestInds[], int const &nDone)
+{
+  static boolean acceptanceCriteria[maxNKeyPressSlots];
+  static millis_t relevantMillis[maxNKeyPressSlots];
+  
+  //assess the acceptance criteria for each candidate key press
+  for (int I_key = 0; I_key < maxNKeyPressSlots;  I_key++) {
+    acceptanceCriteria[I_key] = true;  //everything is accepted in this case!
+    if (I_key >= nKeyPressSlots) acceptanceCriteria[I_key] = false; //except those that are out of contention 
+    relevantMillis[I_key]=max(allKeybedData[I_key].start_millis,allKeybedData[I_key].end_millis);
+  }
+  
+  //call newest search
+  int nFound = findNewest(nKeyPressesToFind, nDone, acceptanceCriteria, relevantMillis, newestInds);
+  
+  return nFound;
+}
 
 
 void keybed_t::reduceAndConsolodate(const int &newVal)
@@ -573,3 +665,5 @@ bool keybed_givenlist_t::isPressedOrHeld(const int &ind) {
 }
 
 int keybed_givenlist_t::getMaxKeySlots(void) { return maxNKeyPressSlots; }
+
+#endif

@@ -60,7 +60,7 @@ voiceData_t allVoiceData[N_VOICE_SLOTS]; //these are the 6 voices of the polysix
 assignerState_t assignerState;
 arpManager_t arpManager(&trueKeybed, &arpGeneratedKeybed, &trueKeybed_givenList);
 assignerButtonState2_t assignerButtonState;
-chordMemState_t chordMemState;
+ChordMem chordMemState;
 tuningModeState_t tuningModeState;
 volatile boolean newTimedAction = false; //used for basic voice timing
 volatile micros_t prev_ARP_tic_micros = 0L;
@@ -93,7 +93,9 @@ byte aftertouch_lookup[128] = {0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3
 long voiceDuration_usec = 676; //standard is 676, human debugging is 250000
 
 //define the timer callback function
-void timer3_callback() { newTimedAction = true; }
+void timer3_callback() {
+  newTimedAction = true;
+}
 
 //include some functions that are useful
 #include "hardwareServices.h"
@@ -118,7 +120,6 @@ void setup() {
 
   //initialize data structures
   assignerState.init();
-  initChordMemState();
   initializeVoiceData(allVoiceData, N_POLY);
   readEEPROM();
 
@@ -130,7 +131,7 @@ void setup() {
   Timer3.attachInterrupt(timer3_callback);  // attaches callback() as a timer overflow interrupt
 
   //setup interupt pin for arpeggiator Arpegiator and LFO
-  #define PS_ACKI_INT 4  //which interrupt?  On Mega 2560, #4 is on pin 19. http://arduino.cc/en/Reference/AttachInterrupt 
+#define PS_ACKI_INT 4  //which interrupt?  On Mega 2560, #4 is on pin 19. http://arduino.cc/en/Reference/AttachInterrupt 
   attachInterrupt(PS_ACKI_INT, measureInterruptTiming, RISING); //measure the ARP timing
   //pinMode(LFO_OUT_PIN,OUTPUT);
   //Timer4.initialize(LFO_PWM_MICROS/2);
@@ -197,7 +198,7 @@ void readEEPROM(void) {
     EEPROM.get(eeAddress, foo_float);
     if (isnan(foo_float)) foo_float = 0.0f;
     if (fabs(foo_float) > 3.0) foo_float = 0.0f; //reject overly large values
-    myRibbon.setCal(I_cal,foo_float);
+    myRibbon.setCal(I_cal, foo_float);
     eeAddress += sizeof(foo_float);
   }
   return;
@@ -315,8 +316,8 @@ void serviceSerial(void) {
 }
 
 void adjustTuningThisVoiceOrRibbon(int adjustmentFactor, bool printDebug) {
-//adjustment factor will be +/-1 or +/-5 (or whatever) representing a small or large tuning adjustment
-  
+  //adjustment factor will be +/-1 or +/-5 (or whatever) representing a small or large tuning adjustment
+
   //find which voice is the most recent (assumed currently active)
   int curVoiceInd = getNewestActiveVoiceInd(); //counts voices starting from zero
   if (curVoiceInd < 0) return 0;
@@ -332,8 +333,8 @@ void adjustTuningThisVoiceOrRibbon(int adjustmentFactor, bool printDebug) {
     if (curNote > 36) { //assume the ribbon is notes 12-48...though, because we're using voice data instead of keypress, the octave switch on the synth could mess this allup?!?
       calInd = 1;  //let's adjust the high end of the ribbon cal
     }
-    myRibbon.incrementCal(calInd,adjustmentFactor*rib_cal_adjust_factor);
-   
+    myRibbon.incrementCal(calInd, adjustmentFactor * rib_cal_adjust_factor);
+
   } else {
     //adjust the synth voice's calibration
 
@@ -343,7 +344,7 @@ void adjustTuningThisVoiceOrRibbon(int adjustmentFactor, bool printDebug) {
     int Istartend = 0;
     int noteRelCurOct = curNote - curOctaveInd * 12;
     if (noteRelCurOct == 11) Istartend = 1;
-  
+
     if (tuningModeState.adjustmentMode == TUNING_MODE_ALL_VOICES) {
       for (int I_voice = 0; I_voice < N_POLY; I_voice++) {
         perVoiceTuningFactors_x16bits[I_voice][curOctaveInd][Istartend] += \
@@ -353,7 +354,7 @@ void adjustTuningThisVoiceOrRibbon(int adjustmentFactor, bool printDebug) {
       perVoiceTuningFactors_x16bits[curVoiceInd][curOctaveInd][Istartend] += \
           ((int32_t)adjustmentFactor) * tuningAdjustmentFactor_x16bits;
     }
-  
+
     if (printDebug) {
       Serial.print(F("adjustTuningThisVoiceOrRibbon: voice = ")); Serial.print(curVoiceInd);
       Serial.print(F(", note = ")); Serial.print(curNote);

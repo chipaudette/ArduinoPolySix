@@ -9,9 +9,6 @@
 #define PRINT_CAL_TEXT false
 
 #define RIBBON_SPAN (1023)
-//define BEND_DEFAULT 0
-//define BEND_FOR_RIBBON 1
-//define RIB_NOTE_NUM_IF_NOTE_OFF -1.0
 #define RIB_NOTE_ON_VEL 127
 #define RIB_NOTE_OFF_VEL 127
 #define RIB_NOTE_OFFSET (12.0f)    //the bottom of the ribbon would normally issue note zero.  This adds an offset to issue a different note
