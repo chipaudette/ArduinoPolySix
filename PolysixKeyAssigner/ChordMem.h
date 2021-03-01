@@ -15,7 +15,7 @@ class ScaleTransposer {
     int set_currentScale(const int ind) { if ( (ind >= 0) && (ind < N_SCALES) ) curScaleInd = ind;  return curScaleInd;}
     int matchAndSetScaleForGivenNotes(const int nGivenNotes, int noteNumRelRoot[], int isNoteActive[]);
     
-    int getNoteWithinScale(const int &curFirstNote, const int &scaleStepsAbovelRoot, bool printDebug); //this is what one generally calls when deciding what note to play
+    int getNoteWithinScale(const int &curFirstNote, const int &scaleStepsAbovelRoot, const bool &printDebug); //this is what one generally calls when deciding what note to play
     int getClosestInScaleNoteNum(const int &note); //given a noteNum, it'll return the nearest noteNum that is in the scale.  Helper function
     int getScaleStepOfNote(const int &noteNum);    //given a noteNum, it'll return the best scaleStep for that note in the current key and scale
     
@@ -33,13 +33,13 @@ class ScaleTransposer {
     int scaleStepsPerOctave[N_SCALES]          = { 7, 7, 7, 7, 7, 7, N_TONES };  //how many valid values in arrays below
     //given a noteNum (0-11), what step in the scale does it correspond to?
     //this array counts from one, because the root is always called the "1st" step in the scale
-    int scales_scaleStep[N_SCALES][N_TONES] = { {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7}, //natural minor
-                                              {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7}, //major
-                                              {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7}, //dorian
-                                              {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7}, //mixolydian
-                                              {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7}, //harmonic minor
-                                              {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7}, //phrygian dominant
-                                              {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}, //chromatic
+    int scales_scaleStep[N_SCALES][N_TONES] = { {1, 2, 2, 3, 3, 4, 5, 5, 6, 6,  7,  7}, //natural minor
+                                                {1, 2, 2, 3, 3, 4, 5, 5, 6, 6,  7,  7}, //major
+                                                {1, 2, 2, 3, 3, 4, 5, 5, 6, 6,  7,  7}, //dorian
+                                                {1, 2, 2, 3, 3, 4, 5, 5, 6, 6,  7,  7}, //mixolydian
+                                                {1, 2, 2, 3, 3, 4, 5, 5, 6, 6,  7,  7}, //harmonic minor
+                                                {1, 2, 2, 3, 3, 4, 5, 5, 6, 6,  7,  7}, //phrygian dominant
+                                                {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}, //chromatic
                                             };
 
     //given a scaleStep, what is the noteNum (ie, interal in half steps) up from the root of the scale?
@@ -159,35 +159,30 @@ long int ChordMem::getNewTargNoteNum_x16bits(keyPressData_t &ref_keypress, int I
   return getNewTargNoteNum_x16bits(ref_keypress, Ivoice, false);
 }
 long int ChordMem::getNewTargNoteNum_x16bits(keyPressData_t &ref_keypress, int Ivoice, bool smart_transpose) {
-  static int lastNoteNum[N_POLY];
   long int new_note_x16bits = 0;
-  int noteShift_foo = 0;
 
   bool printDebug = false;
-  //if (ref_keypress.noteNum != lastNoteNum[Ivoice]) {
-  //  printDebug = true;
-  //}
 
+  //uncomment this block for debugging
+  //static int lastNoteNum[N_POLY];
+  //if (ref_keypress.noteNum != lastNoteNum[Ivoice]) { printDebug = true;}
+  //lastNoteNum[Ivoice] = ref_keypress.noteNum;
+
+  //use old-fashioned dumb transpose if smart_transpose is off or if the given root note is already out of the scale
   if ((smart_transpose == false) || ((ref_keypress.noteNum - scaleTransposer.getClosestInScaleNoteNum(ref_keypress.noteNum)) != 0)) {
     //old-fashioned dumb transpose where it knows nothing of key or scale
-    noteShift_foo = (int)(noteShift_x16bits[Ivoice] >> 16);
     new_note_x16bits = ref_keypress.targNoteNum_x16bits + noteShift_x16bits[Ivoice];
   } else {
     //new smart transpose where it accounts for the key and the scale
-    //noteShift_foo = scaleTransposer.getNoteInScale(ref_keypress.noteNum,noteShift[Ivoice]);
-    noteShift_foo = scaleTransposer.getNoteWithinScale(ref_keypress.noteNum, noteShift_scaleStep[Ivoice],printDebug); //this is in units of noteNum (ie, half steps)
-    //long int purposefulOutOfTune_x16bits = 0;
+    int noteShift_noteNum = scaleTransposer.getNoteWithinScale(ref_keypress.noteNum, noteShift_scaleStep[Ivoice], printDebug); //this is in units of noteNum (ie, half steps)
     long int purposefulOutOfTune_x16bits =  ref_keypress.targNoteNum_x16bits - ((ref_keypress.targNoteNum_x16bits >> 16) << 16);
-    new_note_x16bits = (((long int)noteShift_foo) << 16) + purposefulOutOfTune_x16bits;
+    new_note_x16bits = (((long int)noteShift_noteNum) << 16) + purposefulOutOfTune_x16bits;
   }
 
 
   if (printDebug) {
-    lastNoteNum[Ivoice] = ref_keypress.noteNum;
     Serial.print("ChordMem: getNewTargNoteNum_x16bits: Ivoice = "); Serial.print(Ivoice);
     Serial.print(", ref note = ");Serial.print(ref_keypress.noteNum);
-    //Serial.print(", note out raw = "); Serial.print((ref_keypress.targNoteNum_x16bits + noteShift_x16bits[Ivoice]) >> 16);
-    //Serial.print(", noteShift final = "); Serial.print(new_note_x16bits >> 16);
     Serial.print(", note shift raw = "); Serial.print(((ref_keypress.targNoteNum_x16bits + noteShift_x16bits[Ivoice]) >> 16) - ref_keypress.noteNum);
     Serial.print(", note shift final = "); Serial.print((new_note_x16bits >> 16) - ref_keypress.noteNum);
    Serial.println();
@@ -374,18 +369,6 @@ int ScaleTransposer::matchAndSetScaleForGivenNotes(const int nGivenNotes, int no
   Serial.println(); 
 }
 
-/*
-int ScaleTransposer::getNoteInScale(const int &curFirstNote, const int &origNoteNumRelRoot) {
-  int offset = curKey;
-  int foo = (curFirstNote - offset) + origNoteNumRelRoot;
-  while (foo < 0) { foo += N_TONES; offset -= N_TONES; } //make sure it is zero or above
-  while (foo >= N_TONES) { foo -= N_TONES; offset += N_TONES; }; //make sure it is less than N_TONES
-  int new_val = scales_noteNum[curScaleInd][foo] + offset;
-  while (new_val < 0) new_val += N_TONES;  //make sure it's a positive value
-  return new_val;
-}
-*/
-
 int ScaleTransposer::getClosestInScaleNoteNum(const int &note) {
   int offset = curKey;
   int newNote = note - curKey;
@@ -407,22 +390,26 @@ int ScaleTransposer::getScaleStepOfNote(const int &noteNum) {
 
 //here's the primary function for the rest of the PolySix to use when figuring out what notes
 //to play when Chord Mem is active
-int ScaleTransposer::getNoteWithinScale(const int &rootNote_noteNum, const int &scaleStepsAboveRoot, bool printDebug) {
+int ScaleTransposer::getNoteWithinScale(const int &rootNote_noteNum, const int &scaleStepsAboveRoot, const bool &printDebug) {
+
+  //get the root note of the chord and get it within one octave (so that we can lookup stuff in our lookup tables)
   int root_inOctave_noteNum = rootNote_noteNum - curKey; //start with the raw notNum that we will try to fit within the octave (0-11)
-  //root_inOctave_noteNum = getClosestInScaleNoteNum(root_inOctave_noteNum);  //first, push the note to one that is within the scale
   int offset_noteNum = 0; //we'll accumulate this here at the beginning, but we'll add it back in only way down at the bottom
   while (root_inOctave_noteNum < 0) { root_inOctave_noteNum += N_TONES; offset_noteNum -= N_TONES; }  //getting this to be within 0-11
   while (root_inOctave_noteNum >= N_TONES) { root_inOctave_noteNum -= N_TONES; offset_noteNum += N_TONES; } //getting this to be within 0-11
+
+  //now, look what step in our scale the root note is
   int root_inOctave_scaleStep = scales_scaleStep[curScaleInd][root_inOctave_noteNum];  //this will be 1-7 (or 1-12) depending upon the scale
+
+  //now we want to compute the target note, which is specified as scale steps relative to the root
   int targ_scaleStep = root_inOctave_scaleStep + (scaleStepsAboveRoot-1);  //this is in steps of the scale.  minus one because the root (in scaleStep) is 1, so we need to not keep adding 1.  ideally, it would be 1-7 (or 1-12) but it's now probably too larget
-  
   
   //force targ_scaleStep to fit within 1-7 (or 1-12, depending upon the scale)
   int offset_octaves = 0;
   while (targ_scaleStep <= 0) { targ_scaleStep += scaleStepsPerOctave[curScaleInd]; offset_octaves -= 1; }  //trying to get this within 1-7 (or 1-12) depending on scale
   while (targ_scaleStep > scaleStepsPerOctave[curScaleInd]) { targ_scaleStep -= scaleStepsPerOctave[curScaleInd]; offset_octaves += 1; }  //trying to get this within 1-7 (or 1-12) depending on scale
 
-  //build up the outgoing note (in units of semitones...aka in units of noteNum)
+  //convert outgoing note from units of scale steps to units of semitones (aka. units of "noteNum")
   int newNote_noteNum = scaleStepToNoteNum[curScaleInd][targ_scaleStep-1]; //the subtract by one is to account for scaleSteps starting at 1 not at 0
   newNote_noteNum += (offset_octaves * N_TONES);  //assume that there are N_TONES in an octave
   newNote_noteNum += (curKey+offset_noteNum); //add the octave offset from the root note back in
