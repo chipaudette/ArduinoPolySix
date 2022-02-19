@@ -16,4 +16,4 @@ Finally, anything under "Trials" were simply explorations that didn't lead to pe
 PolySixKeyAssigner
 ==================
 
-To get into "Tuning Mode", press and hold the Arp Button, then switch the "From Tape" switch from LOW to HIGH.
+To get into "Tuning Mode", switch the Tape Enable switch to "Enable".  To tune one voice at a time, you probably need to swtich the Arpeggiator Range to "2 OCT".  Then, press and sustain a "C" note.  Use the Key Assign buttons ("Hold", "Chord", "Unison", and "Poly") to adjust the tuning for that voice for that "C".  Repeat for all six voices.  Then, step up to the next octave's "C" and repeat.  Switch "Table Enable" to Disable when done.
